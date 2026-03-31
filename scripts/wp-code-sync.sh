@@ -4,7 +4,18 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
-DEFAULT_CONFIG_PATH="${ROOT_DIR}/config/wp-code-mirror.config.json"
+
+detect_default_storage_root() {
+  if [[ "${ROOT_DIR}" == */wp-content/plugins/* ]]; then
+    printf '%s/wp-content/uploads/wp-code-mirror\n' "${ROOT_DIR%/wp-content/plugins/*}"
+    return
+  fi
+
+  printf '%s\n' "${ROOT_DIR}"
+}
+
+DEFAULT_STORAGE_ROOT="$(detect_default_storage_root)"
+DEFAULT_CONFIG_PATH="${DEFAULT_STORAGE_ROOT}/config/wp-code-mirror.config.json"
 
 usage() {
   cat <<'EOF'

@@ -23,7 +23,7 @@ Then:
 4. click `Save Config`
 5. install and start the watcher for your target site
 
-`config/wp-code-mirror.config.example.json` is optional. Use it if you want to pre-seed the setup outside wp-admin or keep the first config under file control from the start. Otherwise the plugin will create `config/wp-code-mirror.config.json` when you save the form.
+`config/wp-code-mirror.config.example.json` is optional. Use it if you want to pre-seed the setup outside wp-admin or keep the first config under file control from the start. Otherwise the plugin will create a site-local config at `wp-content/uploads/wp-code-mirror/config/wp-code-mirror.config.json` when you save the form.
 
 ## What It Does
 
@@ -70,60 +70,12 @@ The working model is simple:
 - configure one or more target WordPress sites
 - let the watcher keep those targets in sync
 
-## Prototype Setup
-
-This repository currently represents a productized prototype, not a polished
-distribution package.
-
-Today the project contains:
-
-- a WordPress plugin at the repository root
-- host-side sync scripts in [`scripts/`](scripts)
-- an example config in [`config/`](config)
-- positioning and launch documents in [`docs/`](docs)
-
-The current host-side workflow is macOS-first and relies on `rsync`, `jq`, and
-`launchd`.
-
-## Current Prototype Scope
-
-The current prototype supports:
-
-- one source install
-- multiple local target sites
-- selected themes and plugins
-- config editing from wp-admin
-- per-target watcher status in wp-admin
-- host-side sync via `rsync`
-- automatic watcher startup on macOS with `launchd`
-
 ## Current Limitations
 
-This is still an early open-source prototype.
-
-- The current watcher service is macOS-first.
-- The existing codebase grew out of a real internal workflow and still needs
-  some packaging cleanup.
+- Early macOS-first prototype.
+- The watcher service currently depends on `rsync`, `jq`, and `launchd`.
 - It is focused on local development, not deployment.
 - It syncs code only, not content or databases.
-
-## Repository Layout
-
-```text
-assets/
-config/
-  wp-code-mirror.config.example.json
-docs/
-  positioning.md
-  launch-plan.md
-includes/
-tests/
-scripts/
-  wp-code-sync.sh
-  wp-code-sync-service.sh
-wp-code-mirror.php
-README.md
-```
 
 ## Who It Is For
 
@@ -133,46 +85,6 @@ WP Code Mirror is for WordPress developers who:
 - test across multiple local sites
 - want one working codebase instead of many stale copies
 - are tired of ZIP reinstall loops and manual sync work
-
-## Roadmap
-
-Short term:
-
-- clean public packaging and naming
-- improve installation flow
-- add screenshots and a short demo
-- document real setup steps end to end
-
-Next:
-
-- improve admin UX
-- expand beyond macOS-specific service management
-- harden sync controls and logs
-- make multi-site workflows easier to configure
-
-## Status
-
-WP Code Mirror is in active prototype stage.
-
-The concept is real, the workflow is useful, and the current repo is being
-shaped into a standalone open-source developer tool.
-
-## Planned GitHub Presentation Improvements
-
-- add screenshots from the wp-admin interface
-- add a short demo GIF
-- document installation for a clean local environment
-- prepare a publishable plugin package
-
-## Contributing
-
-Contributions, workflow feedback, and naming/packaging suggestions are welcome.
-
-The most useful feedback right now is:
-
-- how you currently test one codebase across many WordPress sites
-- where local WordPress workflows become repetitive
-- what would make a tool like this easier to trust
 
 ## License
 

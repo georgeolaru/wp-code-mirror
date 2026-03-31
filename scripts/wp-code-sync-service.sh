@@ -5,7 +5,19 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 SYNC_SCRIPT="${SCRIPT_DIR}/wp-code-sync.sh"
-DEFAULT_CONFIG_PATH="${ROOT_DIR}/config/wp-code-mirror.config.json"
+
+detect_default_storage_root() {
+  if [[ "${ROOT_DIR}" == */wp-content/plugins/* ]]; then
+    printf '%s/wp-content/uploads/wp-code-mirror\n' "${ROOT_DIR%/wp-content/plugins/*}"
+    return
+  fi
+
+  printf '%s\n' "${ROOT_DIR}"
+}
+
+DEFAULT_STORAGE_ROOT="$(detect_default_storage_root)"
+DEFAULT_CONFIG_PATH="${DEFAULT_STORAGE_ROOT}/config/wp-code-mirror.config.json"
+DEFAULT_RUNTIME_DIR="${DEFAULT_STORAGE_ROOT}/tmp"
 
 resolve_home_dir() {
   if [[ -n "${HOME:-}" ]]; then
@@ -31,12 +43,12 @@ LAUNCH_AGENTS_DIR="${USER_HOME_DIR}/Library/LaunchAgents"
 usage() {
   cat <<'EOF'
 Usage:
-  bash scripts/wp-code-sync-service.sh install  --target <label> [--config <path>] [--interval <seconds>]
-  bash scripts/wp-code-sync-service.sh start    --target <label> [--config <path>] [--interval <seconds>]
+  bash scripts/wp-code-sync-service.sh install  --target <label> [--config <path>] [--runtime-dir <path>] [--interval <seconds>]
+  bash scripts/wp-code-sync-service.sh start    --target <label> [--config <path>] [--runtime-dir <path>] [--interval <seconds>]
   bash scripts/wp-code-sync-service.sh stop     --target <label>
-  bash scripts/wp-code-sync-service.sh restart  --target <label> [--config <path>] [--interval <seconds>]
+  bash scripts/wp-code-sync-service.sh restart  --target <label> [--config <path>] [--runtime-dir <path>] [--interval <seconds>]
   bash scripts/wp-code-sync-service.sh uninstall --target <label>
-  bash scripts/wp-code-sync-service.sh status   --target <label> [--json]
+  bash scripts/wp-code-sync-service.sh status   --target <label> [--runtime-dir <path>] [--json]
 EOF
 }
 
@@ -58,15 +70,15 @@ plist_path() {
 }
 
 status_file_path() {
-  printf '%s/tmp/wp-code-mirror-%s-status.json\n' "${ROOT_DIR}" "$(sanitize_label "$1")"
+  printf '%s/wp-code-mirror-%s-status.json\n' "${RUNTIME_DIR}" "$(sanitize_label "$1")"
 }
 
 stdout_log_path() {
-  printf '%s/tmp/wp-code-mirror-%s.log\n' "${ROOT_DIR}" "$(sanitize_label "$1")"
+  printf '%s/wp-code-mirror-%s.log\n' "${RUNTIME_DIR}" "$(sanitize_label "$1")"
 }
 
 stderr_log_path() {
-  printf '%s/tmp/wp-code-mirror-%s.error.log\n' "${ROOT_DIR}" "$(sanitize_label "$1")"
+  printf '%s/wp-code-mirror-%s.error.log\n' "${RUNTIME_DIR}" "$(sanitize_label "$1")"
 }
 
 ensure_target_exists() {
@@ -92,7 +104,7 @@ write_plist() {
   local interval="$3"
   local plist output_status output_log error_log label
 
-  mkdir -p "${LAUNCH_AGENTS_DIR}" "${ROOT_DIR}/tmp"
+  mkdir -p "${LAUNCH_AGENTS_DIR}" "${RUNTIME_DIR}"
 
   plist="$(plist_path "${target_label}")"
   output_status="$(status_file_path "${target_label}")"
@@ -234,6 +246,7 @@ main() {
   shift || true
 
   local config_path="${DEFAULT_CONFIG_PATH}"
+  local runtime_dir="${DEFAULT_RUNTIME_DIR}"
   local target_label=""
   local interval="2"
   local output_json=0
@@ -248,6 +261,11 @@ main() {
       --target)
         [[ $# -ge 2 ]] || fail "--target requires a value"
         target_label="$2"
+        shift 2
+        ;;
+      --runtime-dir)
+        [[ $# -ge 2 ]] || fail "--runtime-dir requires a value"
+        runtime_dir="$2"
         shift 2
         ;;
       --interval)
@@ -272,6 +290,7 @@ main() {
   [[ -n "${target_label}" ]] || fail "--target is required"
   [[ -f "${config_path}" ]] || fail "config file not found: ${config_path}"
   ensure_target_exists "${config_path}" "${target_label}"
+  RUNTIME_DIR="${runtime_dir%/}"
 
   case "${command}" in
     install)

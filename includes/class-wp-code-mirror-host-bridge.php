@@ -96,6 +96,8 @@ class WP_Code_Mirror_Host_Bridge {
 				'status',
 				'--config',
 				$this->config_path,
+				'--runtime-dir',
+				$this->tmp_dir,
 				'--target',
 				$target_label,
 				'--json',
@@ -135,6 +137,8 @@ class WP_Code_Mirror_Host_Bridge {
 				$command,
 				'--config',
 				$this->config_path,
+				'--runtime-dir',
+				$this->tmp_dir,
 				'--target',
 				$target_label,
 			]
