@@ -18,10 +18,12 @@ git clone <repo-url> wp-content/plugins/wp-code-mirror
 Then:
 
 1. activate the `WP Code Mirror` plugin in wp-admin
-2. copy `config/wp-code-mirror.config.example.json` to `config/wp-code-mirror.config.json`
+2. open `Tools -> WP Code Mirror`
 3. update the source and target site paths
-4. open `Tools -> WP Code Mirror`
+4. click `Save Config`
 5. install and start the watcher for your target site
+
+`config/wp-code-mirror.config.example.json` is optional. Use it if you want to pre-seed the setup outside wp-admin or keep the first config under file control from the start. Otherwise the plugin will create `config/wp-code-mirror.config.json` when you save the form.
 
 ## What It Does
 
