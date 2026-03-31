@@ -6,7 +6,7 @@ WP Code Mirror
 
 ## Tagline
 
-Test across many WordPress sites from one working codebase.
+Test your themes or plugins across many WordPress sites from one working codebase.
 
 ## Product Summary
 

@@ -72,7 +72,7 @@ class WP_Code_Mirror_Admin_Page {
 		?>
 		<div class="wrap wp-code-mirror-admin">
 			<h1>WP Code Mirror</h1>
-			<p>Test across many WordPress sites from one working codebase. Manage the shared config, check watcher health, and control the local mirror service from here.</p>
+			<p>Test your themes or plugins across many WordPress sites from one working codebase. Manage the shared config, check watcher health, and control the local mirror service from here.</p>
 			<?php if ( '' !== $message ) : ?>
 				<div class="notice notice-<?php echo esc_attr( 'error' === $level ? 'error' : 'success' ); ?> is-dismissible">
 					<p><?php echo esc_html( $message ); ?></p>

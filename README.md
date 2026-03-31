@@ -1,6 +1,6 @@
 # WP Code Mirror
 
-> Test across many WordPress sites from one working codebase.
+> Test your themes or plugins across many WordPress sites from one working codebase.
 
 WP Code Mirror helps WordPress developers keep one in-development theme or
 plugin aligned across many local WordPress sites. Instead of reinstalling ZIPs,

@@ -1,7 +1,7 @@
 <?php
 /**
  * Plugin Name: WP Code Mirror
- * Description: Test across many WordPress sites from one working codebase.
+ * Description: Test your themes or plugins across many WordPress sites from one working codebase.
  * Version: 0.1.0
  * Author: George Olaru
  */
