@@ -1,0 +1,22 @@
+{
+  "source_site": "/absolute/path/to/source-wordpress-site",
+  "targets": [
+    {
+      "label": "example-site",
+      "site_path": "/absolute/path/to/target-wordpress-site",
+      "themes": [
+        "your-theme-slug"
+      ],
+      "plugins": [
+        "your-plugin-slug"
+      ]
+    }
+  ],
+  "rsync_excludes": [
+    ".DS_Store",
+    ".git/",
+    ".github/",
+    ".idea/",
+    "node_modules/"
+  ]
+}

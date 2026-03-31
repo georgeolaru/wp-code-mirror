@@ -1,0 +1,121 @@
+.wp-code-mirror-admin .wp-code-mirror-grid {
+  display: grid;
+  gap: 20px;
+  grid-template-columns: minmax(320px, 1fr) minmax(320px, 1fr);
+  margin-top: 20px;
+}
+
+.wp-code-mirror-admin .wp-code-mirror-panel {
+  background: #fff;
+  border: 1px solid #dcdcde;
+  border-radius: 8px;
+  padding: 20px;
+}
+
+.wp-code-mirror-admin .wp-code-mirror-field {
+  display: block;
+  margin-bottom: 16px;
+}
+
+.wp-code-mirror-admin .wp-code-mirror-field span {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+.wp-code-mirror-admin .wp-code-mirror-targets-header,
+.wp-code-mirror-admin .wp-code-mirror-target-card__header,
+.wp-code-mirror-admin .wp-code-mirror-target-editor__header {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.wp-code-mirror-admin .wp-code-mirror-target-editor,
+.wp-code-mirror-admin .wp-code-mirror-target-card {
+  border: 1px solid #dcdcde;
+  border-radius: 8px;
+  margin-top: 16px;
+  padding: 16px;
+}
+
+.wp-code-mirror-admin .wp-code-mirror-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 16px 0;
+}
+
+.wp-code-mirror-admin .wp-code-mirror-actions form {
+  margin: 0;
+}
+
+.wp-code-mirror-admin .wp-code-mirror-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.wp-code-mirror-admin .wp-code-mirror-badge {
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 4px 10px;
+}
+
+.wp-code-mirror-admin .wp-code-mirror-badge.is-running,
+.wp-code-mirror-admin .wp-code-mirror-badge.is-clean {
+  background: #dff7e3;
+  color: #0a5c36;
+}
+
+.wp-code-mirror-admin .wp-code-mirror-badge.is-installed {
+  background: #e5f0ff;
+  color: #164a93;
+}
+
+.wp-code-mirror-admin .wp-code-mirror-badge.is-stopped,
+.wp-code-mirror-admin .wp-code-mirror-badge.is-pending {
+  background: #fff2d8;
+  color: #8a4b00;
+}
+
+.wp-code-mirror-admin .wp-code-mirror-meta dl {
+  display: grid;
+  gap: 6px 12px;
+  grid-template-columns: 120px 1fr;
+  margin: 0;
+}
+
+.wp-code-mirror-admin .wp-code-mirror-meta dt {
+  font-weight: 600;
+}
+
+.wp-code-mirror-admin .wp-code-mirror-meta dd {
+  margin: 0;
+}
+
+.wp-code-mirror-admin .wp-code-mirror-logs {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: 1fr;
+}
+
+.wp-code-mirror-admin .wp-code-mirror-logs pre {
+  background: #101517;
+  border-radius: 6px;
+  color: #d8ece5;
+  font-size: 12px;
+  margin: 0;
+  max-height: 220px;
+  overflow: auto;
+  padding: 12px;
+  white-space: pre-wrap;
+}
+
+@media (max-width: 1100px) {
+  .wp-code-mirror-admin .wp-code-mirror-grid {
+    grid-template-columns: 1fr;
+  }
+}
