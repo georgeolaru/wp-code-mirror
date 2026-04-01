@@ -52,15 +52,15 @@ WP Code Mirror is built to remove that friction.
 ```mermaid
 flowchart TD
     subgraph BEFORE["Without WP Code Mirror"]
-        Dev["Dev Site"] -->|"manual copy"| A["Site A"]
+        Dev["your-theme + your-plugin\n(Dev Site)"] -->|"manual copy"| A["Site A"]
         Dev -->|"ZIP reinstall"| B["Site B"]
-        Dev -->|"forgot to sync"| C["Site C ⚠️ stale"]
+        Dev -->|"forgot to sync"| C["Site C ⚠️ stale code"]
     end
 
     subgraph AFTER["With WP Code Mirror"]
-        Source["Source Site"] -->|"auto-mirror"| X["Site A ✓"]
-        Source -->|"auto-mirror"| Y["Site B ✓"]
-        Source -->|"auto-mirror"| Z["Site C ✓"]
+        Source["your-theme + your-plugin\n(Dev Site)"] -->|"auto-mirror code"| X["Site A ✓"]
+        Source -->|"auto-mirror code"| Y["Site B ✓"]
+        Source -->|"auto-mirror code"| Z["Site C ✓"]
     end
 ```
 
@@ -87,9 +87,10 @@ The working model is simple:
 
 ```mermaid
 flowchart LR
-    subgraph SOURCE["Source Site"]
-        S_Theme["themes/anima"]
-        S_Plugin["plugins/style-manager"]
+    subgraph SOURCE["Source Site wp-content/"]
+        S_Theme["themes/your-theme"]
+        S_Plugin1["plugins/your-plugin-a"]
+        S_Plugin2["plugins/your-plugin-b"]
     end
 
     subgraph PLUGIN["WP Code Mirror Plugin"]
@@ -104,19 +105,21 @@ flowchart LR
         Status["status.json + logs"]
     end
 
-    subgraph TARGETS["Target Sites"]
-        T1_Theme["smoke-site/themes/anima"]
-        T1_Plugin["smoke-site/plugins/style-manager"]
-        T2_Theme["client-site/themes/anima"]
-        T2_Plugin["client-site/plugins/style-manager"]
+    subgraph TARGETS["Target Sites wp-content/"]
+        T1_Theme["site-a/themes/your-theme"]
+        T1_Plugin1["site-a/plugins/your-plugin-a"]
+        T1_Plugin2["site-a/plugins/your-plugin-b"]
+        T2_Theme["site-b/themes/your-theme"]
+        T2_Plugin1["site-b/plugins/your-plugin-a"]
+        T2_Plugin2["site-b/plugins/your-plugin-b"]
     end
 
     Admin -->|save| Config
     Config -->|read| Watcher
     Bridge -->|exec| Watcher
     Watcher --> Rsync
-    Rsync -->|detect + sync| S_Theme & S_Plugin
-    Rsync -->|mirror| T1_Theme & T1_Plugin & T2_Theme & T2_Plugin
+    Rsync -->|detect + sync| S_Theme & S_Plugin1 & S_Plugin2
+    Rsync -->|mirror| T1_Theme & T1_Plugin1 & T1_Plugin2 & T2_Theme & T2_Plugin1 & T2_Plugin2
     Watcher -->|write| Status
     Status -->|display| Admin
 ```
