@@ -49,6 +49,21 @@ becomes work on its own.
 
 WP Code Mirror is built to remove that friction.
 
+```mermaid
+flowchart TD
+    subgraph BEFORE["Without WP Code Mirror"]
+        Dev["Dev Site"] -->|"manual copy"| A["Site A"]
+        Dev -->|"ZIP reinstall"| B["Site B"]
+        Dev -->|"forgot to sync"| C["Site C ⚠️ stale"]
+    end
+
+    subgraph AFTER["With WP Code Mirror"]
+        Source["Source Site"] -->|"auto-mirror"| X["Site A ✓"]
+        Source -->|"auto-mirror"| Y["Site B ✓"]
+        Source -->|"auto-mirror"| Z["Site C ✓"]
+    end
+```
+
 ## How It Works
 
 WP Code Mirror uses two parts:
@@ -69,6 +84,42 @@ The working model is simple:
 - select the theme/plugin code you are actively developing
 - configure one or more target WordPress sites
 - let the watcher keep those targets in sync
+
+```mermaid
+flowchart LR
+    subgraph SOURCE["Source Site"]
+        S_Theme["themes/anima"]
+        S_Plugin["plugins/style-manager"]
+    end
+
+    subgraph PLUGIN["WP Code Mirror Plugin"]
+        Admin["wp-admin UI\n(config + status)"]
+        Config["config.json"]
+        Bridge["Host Bridge\n(PHP → shell)"]
+    end
+
+    subgraph SERVICE["Host Watcher (launchd)"]
+        Watcher["wp-code-sync.sh watch"]
+        Rsync["rsync"]
+        Status["status.json + logs"]
+    end
+
+    subgraph TARGETS["Target Sites"]
+        T1_Theme["smoke-site/themes/anima"]
+        T1_Plugin["smoke-site/plugins/style-manager"]
+        T2_Theme["client-site/themes/anima"]
+        T2_Plugin["client-site/plugins/style-manager"]
+    end
+
+    Admin -->|save| Config
+    Config -->|read| Watcher
+    Bridge -->|exec| Watcher
+    Watcher --> Rsync
+    Rsync -->|detect + sync| S_Theme & S_Plugin
+    Rsync -->|mirror| T1_Theme & T1_Plugin & T2_Theme & T2_Plugin
+    Watcher -->|write| Status
+    Status -->|display| Admin
+```
 
 ## Current Limitations
 
