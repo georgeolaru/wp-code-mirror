@@ -49,19 +49,79 @@ becomes work on its own.
 
 WP Code Mirror is built to remove that friction.
 
+**Without WP Code Mirror:**
+
 ```mermaid
-flowchart TD
-    subgraph BEFORE["Without WP Code Mirror"]
-        Dev["your-theme + your-plugin\n(Dev Site)"] -->|"manual copy"| A["Site A"]
-        Dev -->|"ZIP reinstall"| B["Site B"]
-        Dev -->|"forgot to sync"| C["Site C ⚠️ stale code"]
+flowchart LR
+    subgraph SOURCE["Source Site"]
+        Theme["your-theme"]
+        PluginA["plugin-a"]
+        PluginB["plugin-b"]
     end
 
-    subgraph AFTER["With WP Code Mirror"]
-        Source["your-theme + your-plugin\n(Dev Site)"] -->|"auto-mirror code"| X["Site A ✓"]
-        Source -->|"auto-mirror code"| Y["Site B ✓"]
-        Source -->|"auto-mirror code"| Z["Site C ✓"]
+    subgraph SITE_A["Site A"]
+        A_Theme["your-theme ✓"]
+        A_PluginA["plugin-a ⚠️ old"]
+        A_PluginB["plugin-b ✓"]
     end
+
+    subgraph SITE_B["Site B"]
+        B_Theme["your-theme ⚠️ old"]
+        B_PluginA["plugin-a ✓"]
+        B_PluginB["plugin-b ⚠️ old"]
+    end
+
+    subgraph SITE_C["Site C"]
+        C_Theme["your-theme ⚠️ old"]
+        C_PluginA["plugin-a ⚠️ old"]
+        C_PluginB["plugin-b ⚠️ old"]
+    end
+
+    Theme -->|"manual copy"| A_Theme
+    Theme -->|"forgot"| B_Theme
+    Theme -->|"forgot"| C_Theme
+    PluginA -->|"forgot"| A_PluginA
+    PluginA -->|"ZIP reinstall"| B_PluginA
+    PluginA -->|"forgot"| C_PluginA
+    PluginB -->|"manual copy"| A_PluginB
+    PluginB -->|"forgot"| B_PluginB
+    PluginB -->|"forgot"| C_PluginB
+```
+
+**With WP Code Mirror:**
+
+```mermaid
+flowchart LR
+    subgraph SOURCE["Source Site"]
+        Theme["your-theme"]
+        PluginA["plugin-a"]
+        PluginB["plugin-b"]
+        Other["other themes/plugins"]:::dim
+    end
+
+    subgraph SITE_A["Site A"]
+        A_Theme["your-theme ✓"]
+        A_PluginA["plugin-a ✓"]
+        A_PluginB["plugin-b ✓"]
+    end
+
+    subgraph SITE_B["Site B"]
+        B_Theme["your-theme ✓"]
+        B_PluginA["plugin-a ✓"]
+        B_PluginB["plugin-b ✓"]
+    end
+
+    subgraph SITE_C["Site C"]
+        C_Theme["your-theme ✓"]
+        C_PluginA["plugin-a ✓"]
+        C_PluginB["plugin-b ✓"]
+    end
+
+    Theme -->|"auto-sync"| A_Theme & B_Theme & C_Theme
+    PluginA -->|"auto-sync"| A_PluginA & B_PluginA & C_PluginA
+    PluginB -->|"auto-sync"| A_PluginB & B_PluginB & C_PluginB
+
+    classDef dim fill:#f5f5f5,stroke:#ccc,color:#999
 ```
 
 ## How It Works
@@ -85,44 +145,6 @@ The working model is simple:
 - configure one or more target WordPress sites
 - let the watcher keep those targets in sync
 
-```mermaid
-flowchart LR
-    subgraph SOURCE["Source Site wp-content/"]
-        S_Theme["themes/your-theme"]
-        S_Plugin1["plugins/your-plugin-a"]
-        S_Plugin2["plugins/your-plugin-b"]
-    end
-
-    subgraph PLUGIN["WP Code Mirror Plugin"]
-        Admin["wp-admin UI\n(config + status)"]
-        Config["config.json"]
-        Bridge["Host Bridge\n(PHP → shell)"]
-    end
-
-    subgraph SERVICE["Host Watcher (launchd)"]
-        Watcher["wp-code-sync.sh watch"]
-        Rsync["rsync"]
-        Status["status.json + logs"]
-    end
-
-    subgraph TARGETS["Target Sites wp-content/"]
-        T1_Theme["site-a/themes/your-theme"]
-        T1_Plugin1["site-a/plugins/your-plugin-a"]
-        T1_Plugin2["site-a/plugins/your-plugin-b"]
-        T2_Theme["site-b/themes/your-theme"]
-        T2_Plugin1["site-b/plugins/your-plugin-a"]
-        T2_Plugin2["site-b/plugins/your-plugin-b"]
-    end
-
-    Admin -->|save| Config
-    Config -->|read| Watcher
-    Bridge -->|exec| Watcher
-    Watcher --> Rsync
-    Rsync -->|detect + sync| S_Theme & S_Plugin1 & S_Plugin2
-    Rsync -->|mirror| T1_Theme & T1_Plugin1 & T1_Plugin2 & T2_Theme & T2_Plugin1 & T2_Plugin2
-    Watcher -->|write| Status
-    Status -->|display| Admin
-```
 
 ## Current Limitations
 
