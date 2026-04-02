@@ -1,3 +1,11 @@
+<p align="center">
+  <img
+    src="docs/assets/wp-code-mirror-header.png"
+    alt="WP Code Mirror banner showing one theme or plugin codebase mirrored across multiple WordPress test sites."
+    width="920"
+  />
+</p>
+
 # WP Code Mirror
 
 > Test your themes or plugins across many WordPress sites from one working codebase.
@@ -48,14 +56,6 @@ latest code, the test sites drift out of date, and maintaining those copies
 becomes work on its own.
 
 WP Code Mirror is built to remove that friction.
-
-**Without WP Code Mirror:**
-
-![Diagram showing fragmented manual theme and plugin updates from one source codebase to three target sites with mixed synced and stale states](docs/assets/readme-without-wp-code-mirror.webp)
-
-**With WP Code Mirror:**
-
-![Diagram showing a watcher sync service keeping tracked theme and plugin code aligned across three target sites from one source codebase](docs/assets/readme-with-wp-code-mirror.webp)
 
 ## How It Works
 
