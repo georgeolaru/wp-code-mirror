@@ -1,9 +1,17 @@
 <?php
 /**
  * Plugin Name: WP Code Mirror
- * Description: Test your themes or plugins across many WordPress sites from one working codebase.
+ * Plugin URI:  https://github.com/georgeolaru/wp-code-mirror
+ * Description: Mirror in-development theme and plugin code across multiple WordPress test sites.
  * Version: 0.1.0
  * Author: George Olaru
+ * Author URI:  https://github.com/georgeolaru
+ * Requires at least: 6.0
+ * Tested up to: 7.0
+ * Requires PHP: 7.4
+ * Text Domain: wp-code-mirror
+ * License: MIT
+ * License URI: https://opensource.org/licenses/MIT
  */
 
 declare(strict_types=1);

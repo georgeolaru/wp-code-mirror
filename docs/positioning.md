@@ -6,11 +6,11 @@ WP Code Mirror
 
 ## Tagline
 
-Test your themes or plugins across many WordPress sites from one working codebase.
+One theme or plugin codebase. Many WordPress test sites.
 
 ## Product Summary
 
-WP Code Mirror is a local-first developer tool for WordPress theme and plugin
+WP Code Mirror is a local-first workflow tool for WordPress theme and plugin
 development. It helps developers keep one in-development source of code aligned
 across multiple local WordPress sites, so they can verify more use cases
 without reinstalling ZIPs, copying folders manually, or maintaining duplicate

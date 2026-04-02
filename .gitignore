@@ -1,4 +1,7 @@
 .DS_Store
+.ai/
+.claude/
+.superpowers/
 .idea/
 .vscode/
 node_modules/

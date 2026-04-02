@@ -1,14 +1,27 @@
 {
-  "source_site": "/absolute/path/to/source-wordpress-site",
+  "source_site": "/Users/you/Local Sites/theme-lab/app/public",
   "targets": [
     {
-      "label": "example-site",
-      "site_path": "/absolute/path/to/target-wordpress-site",
+      "label": "smoke-site",
+      "site_path": "/Users/you/Local Sites/theme-smoke/app/public",
       "themes": [
-        "your-theme-slug"
+        "anima"
       ],
       "plugins": [
-        "your-plugin-slug"
+        "pixelgrade-care",
+        "nova-blocks"
+      ]
+    },
+    {
+      "label": "qa-site",
+      "site_path": "/Users/you/Local Sites/theme-qa/app/public",
+      "themes": [
+        "anima"
+      ],
+      "plugins": [
+        "pixelgrade-care",
+        "nova-blocks",
+        "style-manager"
       ]
     }
   ],
@@ -17,6 +30,7 @@
     ".git/",
     ".github/",
     ".idea/",
+    ".vscode/",
     "node_modules/"
   ]
 }
