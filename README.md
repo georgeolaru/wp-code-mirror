@@ -51,78 +51,11 @@ WP Code Mirror is built to remove that friction.
 
 **Without WP Code Mirror:**
 
-```mermaid
-flowchart LR
-    subgraph SOURCE["Source Site"]
-        Theme["your-theme"]
-        PluginA["plugin-a"]
-        PluginB["plugin-b"]
-    end
-
-    subgraph SITE_A["Site A"]
-        A_Theme["your-theme ✓"]
-        A_PluginA["plugin-a ⚠️ old"]
-        A_PluginB["plugin-b ✓"]
-    end
-
-    subgraph SITE_B["Site B"]
-        B_Theme["your-theme ⚠️ old"]
-        B_PluginA["plugin-a ✓"]
-        B_PluginB["plugin-b ⚠️ old"]
-    end
-
-    subgraph SITE_C["Site C"]
-        C_Theme["your-theme ⚠️ old"]
-        C_PluginA["plugin-a ⚠️ old"]
-        C_PluginB["plugin-b ⚠️ old"]
-    end
-
-    Theme -->|"manual copy"| A_Theme
-    Theme -->|"forgot"| B_Theme
-    Theme -->|"forgot"| C_Theme
-    PluginA -->|"forgot"| A_PluginA
-    PluginA -->|"ZIP reinstall"| B_PluginA
-    PluginA -->|"forgot"| C_PluginA
-    PluginB -->|"manual copy"| A_PluginB
-    PluginB -->|"forgot"| B_PluginB
-    PluginB -->|"forgot"| C_PluginB
-```
+![Diagram showing fragmented manual theme and plugin updates from one source codebase to three target sites with mixed synced and stale states](docs/assets/wp-code-mirror-before.svg)
 
 **With WP Code Mirror:**
 
-```mermaid
-flowchart LR
-    subgraph SOURCE["Source Site"]
-        Theme["your-theme"]
-        PluginA["plugin-a"]
-        PluginB["plugin-b"]
-        Other["other themes/plugins"]:::dim
-    end
-
-    subgraph SITE_A["Site A"]
-        A_Theme["your-theme ✓"]
-        A_PluginA["plugin-a ✓"]
-        A_PluginB["plugin-b ✓"]
-    end
-
-    subgraph SITE_B["Site B"]
-        B_Theme["your-theme ✓"]
-        B_PluginA["plugin-a ✓"]
-        B_PluginB["plugin-b ✓"]
-    end
-
-    subgraph SITE_C["Site C"]
-        C_Theme["your-theme ✓"]
-        C_PluginA["plugin-a ✓"]
-        C_PluginB["plugin-b ✓"]
-    end
-
-    Theme -->|"auto-sync"| A_Theme & B_Theme & C_Theme
-    PluginA -->|"auto-sync"| A_PluginA & B_PluginA & C_PluginA
-    PluginB -->|"auto-sync"| A_PluginB & B_PluginB & C_PluginB
-
-    classDef dim fill:#f5f5f5,stroke:#ccc,color:#999
-```
+![Diagram showing a watcher sync service keeping tracked theme and plugin code aligned across three target sites from one source codebase](docs/assets/wp-code-mirror-after.svg)
 
 ## How It Works
 

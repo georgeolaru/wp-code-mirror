@@ -1,0 +1,109 @@
+<svg width="1200" height="540" viewBox="0 0 1200 540" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">With WP Code Mirror</title>
+  <desc id="desc">A source codebase on the left passes theme and plugin updates through a watcher sync service to three target sites that stay aligned.</desc>
+  <defs>
+    <style>
+      .bg { fill: #F6F8FA; }
+      .panel { fill: #FFFFFF; stroke: #CBD5E1; stroke-width: 1.5; rx: 18; }
+      .panel-soft { fill: #F8FAFC; stroke: #CBD5E1; stroke-width: 1.5; rx: 18; }
+      .module { fill: #EFF6FF; stroke: #93C5FD; stroke-width: 1.25; rx: 12; }
+      .module-good { fill: #F0FDF4; stroke: #86EFAC; stroke-width: 1.25; rx: 12; }
+      .title { font: 700 28px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #0F172A; }
+      .section { font: 700 15px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #334155; letter-spacing: 0.02em; text-transform: uppercase; }
+      .label { font: 600 15px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #0F172A; }
+      .small { font: 500 13px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #475569; }
+      .pill-good { fill: #DCFCE7; stroke: #86EFAC; stroke-width: 1; rx: 999; }
+      .pill-text-good { font: 700 11px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #166534; letter-spacing: 0.04em; text-transform: uppercase; }
+      .route { fill: none; stroke: #2563EB; stroke-width: 3; stroke-linecap: round; }
+      .route-good { fill: none; stroke: #16A34A; stroke-width: 3; stroke-linecap: round; }
+      .route-label { fill: #FFFFFF; stroke: #DBEAFE; stroke-width: 1; rx: 999; }
+      .route-text { font: 700 12px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #1D4ED8; letter-spacing: 0.04em; text-transform: uppercase; }
+      .node-dot { fill: #2563EB; }
+      .node-dot-good { fill: #16A34A; }
+      .watcher-fill { fill: #EFF6FF; stroke: #60A5FA; stroke-width: 1.5; rx: 18; }
+    </style>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="1200" height="540" rx="28"/>
+  <text class="title" x="40" y="52">With WP Code Mirror</text>
+
+  <rect class="panel" x="40" y="96" width="250" height="390" rx="18"/>
+  <text class="section" x="64" y="130">Source Codebase</text>
+  <text class="small" x="64" y="152">Single place where the latest code lives</text>
+
+  <rect class="module" x="64" y="182" width="202" height="76" rx="12"/>
+  <circle class="node-dot" cx="88" cy="220" r="7"/>
+  <text class="label" x="104" y="214">theme</text>
+  <text class="small" x="104" y="235">Latest in-development code</text>
+
+  <rect class="module" x="64" y="276" width="202" height="76" rx="12"/>
+  <circle class="node-dot" cx="88" cy="314" r="7"/>
+  <text class="label" x="104" y="308">plugin-a</text>
+  <text class="small" x="104" y="329">Latest in-development code</text>
+
+  <rect class="module" x="64" y="370" width="202" height="76" rx="12"/>
+  <circle class="node-dot" cx="88" cy="408" r="7"/>
+  <text class="label" x="104" y="402">plugin-b</text>
+  <text class="small" x="104" y="423">Latest in-development code</text>
+
+  <path class="route" d="M290 314 C380 314, 410 314, 500 314"/>
+  <rect class="watcher-fill" x="500" y="222" width="184" height="184" rx="18"/>
+  <text class="section" x="538" y="257">Watcher Sync</text>
+  <circle class="node-dot-good" cx="592" cy="309" r="28"/>
+  <path class="route-good" d="M580 309 L590 319 L608 295"/>
+  <text class="small" x="533" y="354">Keeps tracked code aligned</text>
+  <rect class="route-label" x="538" y="368" width="108" height="28" rx="999"/>
+  <text class="route-text" x="564" y="386">auto-sync</text>
+
+  <path class="route-good" d="M684 314 C730 314, 730 130, 760 130"/>
+  <path class="route-good" d="M684 314 C735 314, 735 265, 760 265"/>
+  <path class="route-good" d="M684 314 C730 314, 730 400, 760 400"/>
+
+  <rect class="panel-soft" x="760" y="72" width="400" height="116" rx="18"/>
+  <text class="section" x="786" y="103">Target Site A</text>
+  <text class="small" x="1023" y="103">Aligned code state</text>
+  <rect class="module-good" x="786" y="122" width="106" height="42" rx="12"/>
+  <text class="small" x="800" y="148">theme</text>
+  <rect class="pill-good" x="839" y="131" width="41" height="20" rx="999"/>
+  <text class="pill-text-good" x="848" y="145">synced</text>
+  <rect class="module-good" x="907" y="122" width="106" height="42" rx="12"/>
+  <text class="small" x="921" y="148">plugin-a</text>
+  <rect class="pill-good" x="960" y="131" width="41" height="20" rx="999"/>
+  <text class="pill-text-good" x="969" y="145">synced</text>
+  <rect class="module-good" x="1028" y="122" width="106" height="42" rx="12"/>
+  <text class="small" x="1042" y="148">plugin-b</text>
+  <rect class="pill-good" x="1081" y="131" width="41" height="20" rx="999"/>
+  <text class="pill-text-good" x="1090" y="145">synced</text>
+
+  <rect class="panel-soft" x="760" y="207" width="400" height="116" rx="18"/>
+  <text class="section" x="786" y="238">Target Site B</text>
+  <text class="small" x="1023" y="238">Aligned code state</text>
+  <rect class="module-good" x="786" y="257" width="106" height="42" rx="12"/>
+  <text class="small" x="800" y="283">theme</text>
+  <rect class="pill-good" x="839" y="266" width="41" height="20" rx="999"/>
+  <text class="pill-text-good" x="848" y="280">synced</text>
+  <rect class="module-good" x="907" y="257" width="106" height="42" rx="12"/>
+  <text class="small" x="921" y="283">plugin-a</text>
+  <rect class="pill-good" x="960" y="266" width="41" height="20" rx="999"/>
+  <text class="pill-text-good" x="969" y="280">synced</text>
+  <rect class="module-good" x="1028" y="257" width="106" height="42" rx="12"/>
+  <text class="small" x="1042" y="283">plugin-b</text>
+  <rect class="pill-good" x="1081" y="266" width="41" height="20" rx="999"/>
+  <text class="pill-text-good" x="1090" y="280">synced</text>
+
+  <rect class="panel-soft" x="760" y="342" width="400" height="116" rx="18"/>
+  <text class="section" x="786" y="373">Target Site C</text>
+  <text class="small" x="1023" y="373">Aligned code state</text>
+  <rect class="module-good" x="786" y="392" width="106" height="42" rx="12"/>
+  <text class="small" x="800" y="418">theme</text>
+  <rect class="pill-good" x="839" y="401" width="41" height="20" rx="999"/>
+  <text class="pill-text-good" x="848" y="415">synced</text>
+  <rect class="module-good" x="907" y="392" width="106" height="42" rx="12"/>
+  <text class="small" x="921" y="418">plugin-a</text>
+  <rect class="pill-good" x="960" y="401" width="41" height="20" rx="999"/>
+  <text class="pill-text-good" x="969" y="415">synced</text>
+  <rect class="module-good" x="1028" y="392" width="106" height="42" rx="12"/>
+  <text class="small" x="1042" y="418">plugin-b</text>
+  <rect class="pill-good" x="1081" y="401" width="41" height="20" rx="999"/>
+  <text class="pill-text-good" x="1090" y="415">synced</text>
+</svg>
