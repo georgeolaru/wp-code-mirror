@@ -51,11 +51,11 @@ WP Code Mirror is built to remove that friction.
 
 **Without WP Code Mirror:**
 
-![Diagram showing fragmented manual theme and plugin updates from one source codebase to three target sites with mixed synced and stale states](docs/assets/wp-code-mirror-before.svg)
+![Diagram showing fragmented manual theme and plugin updates from one source codebase to three target sites with mixed synced and stale states](docs/assets/readme-without-wp-code-mirror.webp)
 
 **With WP Code Mirror:**
 
-![Diagram showing a watcher sync service keeping tracked theme and plugin code aligned across three target sites from one source codebase](docs/assets/wp-code-mirror-after.svg)
+![Diagram showing a watcher sync service keeping tracked theme and plugin code aligned across three target sites from one source codebase](docs/assets/readme-with-wp-code-mirror.webp)
 
 ## How It Works
 
