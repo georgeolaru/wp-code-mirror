@@ -2,7 +2,15 @@
 
 set -euo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+DEFAULT_PATH="/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
+if [[ -n "${PATH:-}" ]]; then
+  PATH="${PATH}:${DEFAULT_PATH}"
+else
+  PATH="${DEFAULT_PATH}"
+fi
+export PATH
+
+SCRIPT_DIR="$(cd "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 SYNC_SCRIPT="${SCRIPT_DIR}/wp-code-sync.sh"
 

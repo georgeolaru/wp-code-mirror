@@ -80,6 +80,26 @@ create_config() {
 JSON
 }
 
+create_config_without_excludes() {
+  local config_path="$1"
+  local source_site="$2"
+  local target_site="$3"
+
+  cat >"${config_path}" <<JSON
+{
+  "source_site": "${source_site}",
+  "targets": [
+    {
+      "label": "test-site",
+      "site_path": "${target_site}",
+      "themes": ["anima"],
+      "plugins": ["pixelgrade-care", "nova-blocks", "style-manager"]
+    }
+  ]
+}
+JSON
+}
+
 main() {
   TEST_TEMP_DIR="$(mktemp -d)"
   trap 'rm -rf "${TEST_TEMP_DIR}"' EXIT
@@ -87,6 +107,7 @@ main() {
   local source_site="${TEST_TEMP_DIR}/source"
   local target_site="${TEST_TEMP_DIR}/target"
   local config_path="${TEST_TEMP_DIR}/wp-code-mirror.config.json"
+  local config_without_excludes_path="${TEST_TEMP_DIR}/wp-code-mirror-no-excludes.config.json"
   local status_file="${TEST_TEMP_DIR}/status.json"
 
   make_wp_tree "${source_site}"
@@ -111,12 +132,25 @@ main() {
   printf 'stale plugin\n' >"${target_site}/wp-content/plugins/pixelgrade-care/old.php"
 
   create_config "${config_path}" "${source_site}" "${target_site}"
+  create_config_without_excludes "${config_without_excludes_path}" "${source_site}" "${target_site}"
 
   local status_before
   status_before="$(bash "${SCRIPT_PATH}" status --config "${config_path}" --target test-site)"
   assert_contains "${status_before}" "PENDING"
   assert_contains "${status_before}" "themes/anima"
   assert_contains "${status_before}" "plugins/pixelgrade-care"
+
+  local status_with_empty_path
+  status_with_empty_path="$(env -i PATH='' /bin/bash "${SCRIPT_PATH}" status --config "${config_path}" --target test-site)"
+  assert_contains "${status_with_empty_path}" "PENDING"
+  assert_contains "${status_with_empty_path}" "themes/anima"
+  assert_contains "${status_with_empty_path}" "plugins/pixelgrade-care"
+
+  local status_without_excludes
+  status_without_excludes="$(env -i PATH='' /bin/bash "${SCRIPT_PATH}" status --config "${config_without_excludes_path}" --target test-site)"
+  assert_contains "${status_without_excludes}" "PENDING"
+  assert_contains "${status_without_excludes}" "themes/anima"
+  assert_contains "${status_without_excludes}" "plugins/pixelgrade-care"
 
   bash "${SCRIPT_PATH}" sync --config "${config_path}" --target test-site >/dev/null
 

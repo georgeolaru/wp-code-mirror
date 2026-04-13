@@ -2,7 +2,15 @@
 
 set -euo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+DEFAULT_PATH="/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
+if [[ -n "${PATH:-}" ]]; then
+  PATH="${PATH}:${DEFAULT_PATH}"
+else
+  PATH="${DEFAULT_PATH}"
+fi
+export PATH
+
+SCRIPT_DIR="$(cd "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
 detect_default_storage_root() {
@@ -120,7 +128,7 @@ rsync_changes() {
   local target_path="$2"
   local output
 
-  output="$(rsync -a --delete --dry-run --itemize-changes "${RSYNC_EXCLUDES[@]}" "${source_path}/" "${target_path}/")"
+  output="$(rsync -a --delete --dry-run --itemize-changes ${RSYNC_EXCLUDES[@]+"${RSYNC_EXCLUDES[@]}"} "${source_path}/" "${target_path}/")"
   printf '%s' "${output}"
 }
 
@@ -129,7 +137,7 @@ sync_tree() {
   local target_path="$2"
 
   mkdir -p "${target_path}"
-  rsync -a --delete "${RSYNC_EXCLUDES[@]}" "${source_path}/" "${target_path}/"
+  rsync -a --delete ${RSYNC_EXCLUDES[@]+"${RSYNC_EXCLUDES[@]}"} "${source_path}/" "${target_path}/"
 }
 
 build_target_status_json() {
