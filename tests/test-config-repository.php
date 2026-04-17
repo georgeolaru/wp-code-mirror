@@ -17,10 +17,11 @@ $seed = [
 	'source_site'    => '/tmp/source',
 	'targets'        => [
 		[
-			'label'     => 'site-a',
-			'site_path' => '/tmp/site-a',
-			'themes'    => ['anima'],
-			'plugins'   => ['pixelgrade-care'],
+			'label'      => 'site-a',
+			'site_path'  => '/tmp/site-a',
+			'themes'     => ['anima'],
+			'plugins'    => ['pixelgrade-care'],
+			'mu_plugins' => ['example-loader.php'],
 		],
 	],
 	'rsync_excludes' => ['.DS_Store'],
@@ -35,16 +36,21 @@ if ($loaded['source_site'] !== '/tmp/source') {
 	throw new RuntimeException('Expected source_site to load from JSON');
 }
 
+if ($loaded['targets'][0]['mu_plugins'][0] !== 'example-loader.php') {
+	throw new RuntimeException('Expected mu_plugins to load from JSON');
+}
+
 $normalized = $repository->normalize_from_input(
 	[
 		'source_site'    => '/tmp/source-updated',
 		'rsync_excludes' => ".DS_Store\n.git/\n",
 		'targets'        => [
 			[
-				'label'     => 'site-b',
-				'site_path' => '/tmp/site-b',
-				'themes'    => "anima\n",
-				'plugins'   => "pixelgrade-care\nnova-blocks\nstyle-manager\n",
+				'label'      => 'site-b',
+				'site_path'  => '/tmp/site-b',
+				'themes'     => "anima\n",
+				'plugins'    => "pixelgrade-care\nnova-blocks\nstyle-manager\n",
+				'mu_plugins' => "type-system-transfusion.php\ntype-system-transfusion\n",
 			],
 		],
 	]
@@ -52,6 +58,10 @@ $normalized = $repository->normalize_from_input(
 
 if ($normalized['targets'][0]['plugins'][2] !== 'style-manager') {
 	throw new RuntimeException('Expected plugin lines to normalize into arrays');
+}
+
+if ($normalized['targets'][0]['mu_plugins'][1] !== 'type-system-transfusion') {
+	throw new RuntimeException('Expected mu_plugins lines to normalize into arrays');
 }
 
 $repository->save($normalized);
@@ -64,6 +74,10 @@ if ($saved['source_site'] !== '/tmp/source-updated') {
 
 if ($saved['targets'][0]['themes'][0] !== 'anima') {
 	throw new RuntimeException('Expected themes to persist after save');
+}
+
+if ($saved['targets'][0]['mu_plugins'][0] !== 'type-system-transfusion.php') {
+	throw new RuntimeException('Expected mu_plugins to persist after save');
 }
 
 echo "PASS: config repository\n";

@@ -46,13 +46,14 @@ class WP_Code_Mirror_Config_Repository {
 				}
 
 				$target = [
-					'label'     => $this->normalize_scalar( $raw_target['label'] ?? '' ),
-					'site_path' => $this->normalize_scalar( $raw_target['site_path'] ?? '' ),
-					'themes'    => $this->normalize_line_list( $raw_target['themes'] ?? [] ),
-					'plugins'   => $this->normalize_line_list( $raw_target['plugins'] ?? [] ),
+					'label'      => $this->normalize_scalar( $raw_target['label'] ?? '' ),
+					'site_path'  => $this->normalize_scalar( $raw_target['site_path'] ?? '' ),
+					'themes'     => $this->normalize_line_list( $raw_target['themes'] ?? [] ),
+					'plugins'    => $this->normalize_line_list( $raw_target['plugins'] ?? [] ),
+					'mu_plugins' => $this->normalize_line_list( $raw_target['mu_plugins'] ?? [] ),
 				];
 
-				if ( '' === $target['label'] && '' === $target['site_path'] && [] === $target['themes'] && [] === $target['plugins'] ) {
+				if ( '' === $target['label'] && '' === $target['site_path'] && [] === $target['themes'] && [] === $target['plugins'] && [] === $target['mu_plugins'] ) {
 					continue;
 				}
 
@@ -162,10 +163,11 @@ class WP_Code_Mirror_Config_Repository {
 			}
 
 			$normalized[] = [
-				'label'     => $this->normalize_scalar( $target['label'] ?? '' ),
-				'site_path' => $this->normalize_scalar( $target['site_path'] ?? '' ),
-				'themes'    => $this->normalize_line_list( $target['themes'] ?? [] ),
-				'plugins'   => $this->normalize_line_list( $target['plugins'] ?? [] ),
+				'label'      => $this->normalize_scalar( $target['label'] ?? '' ),
+				'site_path'  => $this->normalize_scalar( $target['site_path'] ?? '' ),
+				'themes'     => $this->normalize_line_list( $target['themes'] ?? [] ),
+				'plugins'    => $this->normalize_line_list( $target['plugins'] ?? [] ),
+				'mu_plugins' => $this->normalize_line_list( $target['mu_plugins'] ?? [] ),
 			];
 		}
 

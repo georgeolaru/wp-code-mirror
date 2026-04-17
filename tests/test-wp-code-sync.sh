@@ -72,7 +72,8 @@ create_config() {
       "label": "test-site",
       "site_path": "${target_site}",
       "themes": ["anima"],
-      "plugins": ["pixelgrade-care", "nova-blocks", "style-manager"]
+      "plugins": ["pixelgrade-care", "nova-blocks", "style-manager"],
+      "mu_plugins": ["example-loader.php", "example-mu"]
     }
   ],
   "rsync_excludes": [".DS_Store", ".git/"]
@@ -93,7 +94,8 @@ create_config_without_excludes() {
       "label": "test-site",
       "site_path": "${target_site}",
       "themes": ["anima"],
-      "plugins": ["pixelgrade-care", "nova-blocks", "style-manager"]
+      "plugins": ["pixelgrade-care", "nova-blocks", "style-manager"],
+      "mu_plugins": ["example-loader.php", "example-mu"]
     }
   ]
 }
@@ -117,19 +119,26 @@ main() {
     "${source_site}/wp-content/themes/anima/assets" \
     "${source_site}/wp-content/plugins/pixelgrade-care/includes" \
     "${source_site}/wp-content/plugins/nova-blocks/src" \
-    "${source_site}/wp-content/plugins/style-manager/lib"
+    "${source_site}/wp-content/plugins/style-manager/lib" \
+    "${source_site}/wp-content/mu-plugins/example-mu"
 
   printf 'source theme\n' >"${source_site}/wp-content/themes/anima/style.css"
   printf 'source asset\n' >"${source_site}/wp-content/themes/anima/assets/theme.txt"
   printf 'pixelgrade care\n' >"${source_site}/wp-content/plugins/pixelgrade-care/includes/bootstrap.php"
   printf 'nova blocks\n' >"${source_site}/wp-content/plugins/nova-blocks/src/index.js"
   printf 'style manager\n' >"${source_site}/wp-content/plugins/style-manager/lib/core.php"
+  printf 'example loader\n' >"${source_site}/wp-content/mu-plugins/example-loader.php"
+  printf 'example mu lib\n' >"${source_site}/wp-content/mu-plugins/example-mu/lib.php"
 
   mkdir -p \
     "${target_site}/wp-content/themes/anima" \
     "${target_site}/wp-content/plugins/pixelgrade-care"
   printf 'stale theme\n' >"${target_site}/wp-content/themes/anima/stale.txt"
   printf 'stale plugin\n' >"${target_site}/wp-content/plugins/pixelgrade-care/old.php"
+
+  # Seed a stale directory-type mu-plugin file to confirm --delete semantics.
+  mkdir -p "${target_site}/wp-content/mu-plugins/example-mu"
+  printf 'stale mu\n' >"${target_site}/wp-content/mu-plugins/example-mu/old.php"
 
   create_config "${config_path}" "${source_site}" "${target_site}"
   create_config_without_excludes "${config_without_excludes_path}" "${source_site}" "${target_site}"
@@ -139,18 +148,22 @@ main() {
   assert_contains "${status_before}" "PENDING"
   assert_contains "${status_before}" "themes/anima"
   assert_contains "${status_before}" "plugins/pixelgrade-care"
+  assert_contains "${status_before}" "mu-plugins/example-loader.php"
+  assert_contains "${status_before}" "mu-plugins/example-mu"
 
   local status_with_empty_path
   status_with_empty_path="$(env -i PATH='' /bin/bash "${SCRIPT_PATH}" status --config "${config_path}" --target test-site)"
   assert_contains "${status_with_empty_path}" "PENDING"
   assert_contains "${status_with_empty_path}" "themes/anima"
   assert_contains "${status_with_empty_path}" "plugins/pixelgrade-care"
+  assert_contains "${status_with_empty_path}" "mu-plugins/example-loader.php"
 
   local status_without_excludes
   status_without_excludes="$(env -i PATH='' /bin/bash "${SCRIPT_PATH}" status --config "${config_without_excludes_path}" --target test-site)"
   assert_contains "${status_without_excludes}" "PENDING"
   assert_contains "${status_without_excludes}" "themes/anima"
   assert_contains "${status_without_excludes}" "plugins/pixelgrade-care"
+  assert_contains "${status_without_excludes}" "mu-plugins/example-mu"
 
   bash "${SCRIPT_PATH}" sync --config "${config_path}" --target test-site >/dev/null
 
@@ -161,6 +174,9 @@ main() {
   assert_missing "${target_site}/wp-content/plugins/pixelgrade-care/old.php"
   assert_file_contains "${target_site}/wp-content/plugins/nova-blocks/src/index.js" "nova blocks"
   assert_file_contains "${target_site}/wp-content/plugins/style-manager/lib/core.php" "style manager"
+  assert_file_contains "${target_site}/wp-content/mu-plugins/example-loader.php" "example loader"
+  assert_file_contains "${target_site}/wp-content/mu-plugins/example-mu/lib.php" "example mu lib"
+  assert_missing "${target_site}/wp-content/mu-plugins/example-mu/old.php"
 
   local status_json
   status_json="$(bash "${SCRIPT_PATH}" status --config "${config_path}" --target test-site --json)"

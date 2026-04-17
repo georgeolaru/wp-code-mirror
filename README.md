@@ -22,7 +22,7 @@ into your target sites.
 ## What It Is
 
 - a WordPress admin plugin for mirror configuration and status
-- a host-side watcher/service layer that syncs selected theme and plugin code
+- a host-side watcher/service layer that syncs selected theme, plugin, and mu-plugin code
 - a local development workflow for testing the same code across multiple sites
 
 ## Who It Is For

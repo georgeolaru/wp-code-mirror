@@ -22,6 +22,10 @@
         "pixelgrade-care",
         "nova-blocks",
         "style-manager"
+      ],
+      "mu_plugins": [
+        "type-system-transfusion.php",
+        "type-system-transfusion"
       ]
     }
   ],

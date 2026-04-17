@@ -77,7 +77,8 @@ validate_config() {
       (.label | type == "string" and length > 0) and
       (.site_path | type == "string" and length > 1) and
       ((.themes // []) | type == "array") and
-      ((.plugins // []) | type == "array")
+      ((.plugins // []) | type == "array") and
+      ((.mu_plugins // []) | type == "array")
     )
   ' "${config_path}" >/dev/null || fail "invalid config structure in ${config_path}"
 }
@@ -113,7 +114,8 @@ iter_target_items() {
   local target_json="$1"
   jq -r '
     ((.themes // [])[] | "themes\t" + .),
-    ((.plugins // [])[] | "plugins\t" + .)
+    ((.plugins // [])[] | "plugins\t" + .),
+    ((.mu_plugins // [])[] | "mu-plugins\t" + .)
   ' <<<"${target_json}"
 }
 
@@ -128,7 +130,19 @@ rsync_changes() {
   local target_path="$2"
   local output
 
-  output="$(rsync -a --delete --dry-run --itemize-changes ${RSYNC_EXCLUDES[@]+"${RSYNC_EXCLUDES[@]}"} "${source_path}/" "${target_path}/")"
+  if [[ -d "${source_path}" ]]; then
+    output="$(rsync -a --delete --dry-run --itemize-changes ${RSYNC_EXCLUDES[@]+"${RSYNC_EXCLUDES[@]}"} "${source_path}/" "${target_path}/")"
+  else
+    # Rsync's --itemize-changes always logs a transfer line for single-file
+    # sources, even when content matches. Fall back to content comparison so
+    # the change list stays empty on CLEAN targets.
+    output=""
+    if [[ ! -e "${target_path}" ]]; then
+      output=">f+++++++ $(basename "${source_path}")"
+    elif ! cmp -s "${source_path}" "${target_path}"; then
+      output=">f.st.... $(basename "${source_path}")"
+    fi
+  fi
   printf '%s' "${output}"
 }
 
@@ -136,8 +150,13 @@ sync_tree() {
   local source_path="$1"
   local target_path="$2"
 
-  mkdir -p "${target_path}"
-  rsync -a --delete ${RSYNC_EXCLUDES[@]+"${RSYNC_EXCLUDES[@]}"} "${source_path}/" "${target_path}/"
+  if [[ -d "${source_path}" ]]; then
+    mkdir -p "${target_path}"
+    rsync -a --delete ${RSYNC_EXCLUDES[@]+"${RSYNC_EXCLUDES[@]}"} "${source_path}/" "${target_path}/"
+  else
+    mkdir -p "$(dirname "${target_path}")"
+    rsync -a ${RSYNC_EXCLUDES[@]+"${RSYNC_EXCLUDES[@]}"} "${source_path}" "${target_path}"
+  fi
 }
 
 build_target_status_json() {
@@ -159,7 +178,7 @@ build_target_status_json() {
     source_path="${SOURCE_SITE}/wp-content/${kind}/${slug}"
     target_path="${site_path}/wp-content/${kind}/${slug}"
 
-    [[ -d "${source_path}" ]] || fail "source item missing: ${source_path}"
+    [[ -e "${source_path}" ]] || fail "source item missing: ${source_path}"
 
     changes="$(rsync_changes "${source_path}" "${target_path}")"
     if [[ -n "${changes}" ]]; then
@@ -289,7 +308,7 @@ sync_target() {
     source_path="${SOURCE_SITE}/wp-content/${kind}/${slug}"
     target_path="${site_path}/wp-content/${kind}/${slug}"
 
-    [[ -d "${source_path}" ]] || fail "source item missing: ${source_path}"
+    [[ -e "${source_path}" ]] || fail "source item missing: ${source_path}"
     sync_tree "${source_path}" "${target_path}"
     echo "SYNCED ${label} ${kind}/${slug}"
   done < <(iter_target_items "${target_json}")

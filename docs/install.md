@@ -87,6 +87,24 @@ Adjust:
 The slugs must match actual directories inside `wp-content/themes` and
 `wp-content/plugins`.
 
+### Mu-Plugins
+
+Each target also accepts an optional `mu_plugins` array. Entries map to
+`wp-content/mu-plugins/<slug>` on both source and target. Mu-plugins are
+commonly split into a loader file plus a companion directory — list them
+as two separate entries:
+
+```json
+"mu_plugins": [
+  "type-system-transfusion.php",
+  "type-system-transfusion"
+]
+```
+
+File entries sync a single `.php` file. Directory entries sync recursively
+with `--delete`, matching the existing theme/plugin behavior. The target's
+`wp-content/mu-plugins/` directory is created on demand.
+
 ## What The Paths Should Look Like
 
 Example source site:

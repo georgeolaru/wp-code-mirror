@@ -106,10 +106,11 @@ class WP_Code_Mirror_Admin_Page {
 							if ( empty( $targets ) ) {
 								$targets = [
 									[
-										'label'     => '',
-										'site_path' => '',
-										'themes'    => [],
-										'plugins'   => [],
+										'label'      => '',
+										'site_path'  => '',
+										'themes'     => [],
+										'plugins'    => [],
+										'mu_plugins' => [],
 									],
 								];
 							}
@@ -121,7 +122,7 @@ class WP_Code_Mirror_Admin_Page {
 						</div>
 
 						<script type="text/template" id="wp-code-mirror-target-template">
-							<?php $this->render_target_editor( '__INDEX__', [ 'label' => '', 'site_path' => '', 'themes' => [], 'plugins' => [] ] ); ?>
+							<?php $this->render_target_editor( '__INDEX__', [ 'label' => '', 'site_path' => '', 'themes' => [], 'plugins' => [], 'mu_plugins' => [] ] ); ?>
 						</script>
 
 						<p>
@@ -265,6 +266,11 @@ class WP_Code_Mirror_Admin_Page {
 			<label class="wp-code-mirror-field">
 				<span>Plugins</span>
 				<textarea name="targets[<?php echo esc_attr( (string) $index ); ?>][plugins]" rows="5" class="large-text code"><?php echo esc_textarea( implode( "\n", (array) ( $target['plugins'] ?? [] ) ) ); ?></textarea>
+			</label>
+
+			<label class="wp-code-mirror-field">
+				<span>Mu-Plugins</span>
+				<textarea name="targets[<?php echo esc_attr( (string) $index ); ?>][mu_plugins]" rows="3" class="large-text code" placeholder="my-loader.php&#10;my-mu-plugin"><?php echo esc_textarea( implode( "\n", (array) ( $target['mu_plugins'] ?? [] ) ) ); ?></textarea>
 			</label>
 		</div>
 		<?php
