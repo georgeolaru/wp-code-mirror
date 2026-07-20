@@ -33,6 +33,27 @@ SYNC_SH="${SCRIPT_DIR}/wp-code-sync.sh"
 
 bold() { printf '\033[1m%s\033[0m' "$1"; }
 dim() { printf '\033[2m%s\033[0m' "$1"; }
+green() { printf '\033[32m%s\033[0m' "$1"; }
+cyan() { printf '\033[36m%s\033[0m' "$1"; }
+
+watcher_loaded() {
+  launchctl print "gui/$(id -u)/com.wp-code-mirror.sync.$1" >/dev/null 2>&1
+}
+
+# Truncate to N chars with a real ellipsis, ANSI-free input only.
+fit() {
+  local s="$1" n="$2"
+  if [[ ${#s} -gt ${n} ]]; then
+    printf '%s…' "${s:0:$((n - 1))}"
+  else
+    printf '%s' "${s}"
+  fi
+}
+
+tilde() {
+  local t='~'
+  printf '%s' "${1/#${HOME}/${t}}"
+}
 
 show_command() {
   echo
@@ -189,19 +210,65 @@ do_cheatsheet() {
 EOF
 }
 
+render_header() {
+  local total watching_count source_short inner line
+  total="$(jq -r '.targets | length' "${CONFIG_PATH}")"
+  watching_count=0
+  local l
+  while IFS= read -r l; do
+    watcher_loaded "${l}" && watching_count=$((watching_count + 1))
+  done < <(labels)
+  source_short="$(tilde "$(jq -r '.source_site' "${CONFIG_PATH}")")"
+
+  inner=" wp-code-mirror · ${total} targets · ${watching_count} watching · ${source_short} "
+  line="$(printf '%*s' "${#inner}" '' | sed 's/ /─/g')"
+  printf '╭%s╮\n' "${line}"
+  printf '│%s│\n' "$(bold "${inner}")"
+  printf '╰%s╯\n' "${line}"
+}
+
+plural() {
+  [[ "$1" == "1" ]] || printf 's'
+}
+
+render_targets() {
+  local label site_path themes plugins mus dot contents
+  while IFS=$'\t' read -r label site_path themes plugins mus; do
+    if watcher_loaded "${label}"; then
+      dot="$(green '●')"
+    else
+      dot="$(dim '○')"
+    fi
+    contents=""
+    if [[ "${themes}" != "0" ]]; then
+      contents="${themes} theme$(plural "${themes}")"
+    fi
+    if [[ "${plugins}" != "0" ]]; then
+      if [[ -n "${contents}" ]]; then contents="${contents} · "; fi
+      contents="${contents}${plugins} plugin$(plural "${plugins}")"
+    fi
+    if [[ "${mus}" != "0" ]]; then
+      if [[ -n "${contents}" ]]; then contents="${contents} · "; fi
+      contents="${contents}${mus} mu"
+    fi
+    printf '  %b %-28s %-34s %b\n' \
+      "${dot}" \
+      "$(fit "${label}" 28)" \
+      "$(fit "$(tilde "${site_path}")" 34)" \
+      "$(dim "${contents}")"
+  done < <(jq -r '.targets[] | [.label, .site_path, (.themes | length), (.plugins | length), (.mu_plugins | length)] | @tsv' "${CONFIG_PATH}")
+}
+
 main_menu() {
   clear 2>/dev/null || true
-  echo "$(bold 'wp-code-mirror')  $(dim "${CONFIG_PATH}")"
   while true; do
     echo
-    bash "${TARGET_SH}" list --config "${CONFIG_PATH}" | sed 's/^/  /'
+    render_header
     echo
-    echo "  1) New mirrored smoke site"
-    echo "  2) Remove a target"
-    echo "  3) Sync a target now"
-    echo "  4) Show a watcher's recent activity"
-    echo "  5) Copy/paste cheat sheet"
-    echo "  q) Quit"
+    render_targets
+    echo
+    printf '  %b New smoke site   %b Remove   %b Sync   %b Watcher log   %b Cheat sheet   %b Quit\n' \
+      "$(cyan '1')" "$(cyan '2')" "$(cyan '3')" "$(cyan '4')" "$(cyan '5')" "$(cyan 'q')"
     echo
     local choice
     read -r -p "> " choice

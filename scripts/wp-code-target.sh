@@ -39,6 +39,7 @@ Usage:
       --plugins <a,b>        Comma-separated plugin dirs to mirror
       --mu-plugins <a,b>     Comma-separated mu-plugin entries to mirror
       --create-site          Create the WordPress Studio site first (studio CLI)
+      --no-open              Skip auto-opening WP Admin after creating the site
       --interval <seconds>   Watcher interval (default: 2)
       --config <path>        Config file (default: uploads/wp-code-mirror/config/...)
 
@@ -166,9 +167,39 @@ csv_to_json_array() {
   printf '%s\n' "${csv}" | jq -R 'split(",") | map(gsub("^\\s+|\\s+$"; "")) | map(select(length > 0))'
 }
 
+# Best-effort: open wp-admin in the browser, auto-logged-in via a wp-cli-login magic link
+# (the Studio app's one-click login is not exposed through the CLI). Falls back to the plain
+# wp-admin URL, and never fails the add flow.
+open_wp_admin() {
+  local site_path="$1"
+  command -v open >/dev/null 2>&1 || return 0
+
+  local pkgs=""
+  pkgs="$(studio wp package list --format=csv --path "${site_path}" 2>/dev/null </dev/null || true)"
+  if [[ "${pkgs}" != *"wp-cli-login-command"* ]]; then
+    studio wp package install aaemnnosttv/wp-cli-login-command --path "${site_path}" </dev/null || true
+  fi
+  studio wp login install --activate --yes --path "${site_path}" </dev/null >/dev/null 2>&1 \
+    || studio wp plugin activate wp-cli-login-server --path "${site_path}" </dev/null >/dev/null 2>&1 \
+    || true
+
+  local url=""
+  url="$(studio wp login create admin --url-only --path "${site_path}" 2>/dev/null </dev/null || true)"
+  if [[ -z "${url}" ]]; then
+    local home=""
+    home="$(studio wp option get home --path "${site_path}" 2>/dev/null </dev/null || true)"
+    [[ -n "${home}" ]] && url="${home}/wp-admin/"
+  fi
+
+  if [[ -n "${url}" ]]; then
+    echo "Opening WP Admin: ${url}"
+    open "${url}" || true
+  fi
+}
+
 cmd_add() {
   local label="$1"; shift
-  local config_path="${DEFAULT_CONFIG_PATH}" site_path="" site_name="" themes_csv="" plugins_csv="" mu_csv="" create_site=0 interval=2
+  local config_path="${DEFAULT_CONFIG_PATH}" site_path="" site_name="" themes_csv="" plugins_csv="" mu_csv="" create_site=0 interval=2 open_admin=1
 
   while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -178,6 +209,7 @@ cmd_add() {
       --plugins) plugins_csv="$2"; shift 2 ;;
       --mu-plugins) mu_csv="$2"; shift 2 ;;
       --create-site) create_site=1; shift ;;
+      --no-open) open_admin=0; shift ;;
       --interval) interval="$2"; shift 2 ;;
       --config) config_path="$2"; shift 2 ;;
       *) fail "unknown option for add: $1" ;;
@@ -235,6 +267,10 @@ cmd_add() {
   echo "Target '${label}' ready:"
   echo "  site:    ${site_path}"
   echo "  watcher: $(launchd_label_for "${label}") (interval ${interval}s)"
+
+  if [[ "${create_site}" -eq 1 && "${open_admin}" -eq 1 ]]; then
+    open_wp_admin "${site_path}"
+  fi
 }
 
 cmd_remove() {
