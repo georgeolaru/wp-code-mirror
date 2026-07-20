@@ -201,8 +201,12 @@ cmd_add() {
   if [[ "${create_site}" -eq 1 ]]; then
     require_tool studio
     [[ -d "${site_path}" ]] && fail "site path already exists: ${site_path}"
+    # Fully non-interactive: admin username/email pinned to Studio's defaults (password stays
+    # auto-generated — argv passwords leak via ps; use Studio's one-click admin login), and
+    # stdin from /dev/null EOFs any remaining TTY prompt (custom domain, future additions).
     studio site create --name "${site_name}" --path "${site_path}" \
-      --wp latest --php 8.3 --start --skip-browser --skip-log-details
+      --wp latest --php 8.3 --start --skip-browser --skip-log-details \
+      --admin-username admin --admin-email admin@localhost.com </dev/null
   fi
 
   [[ -d "${site_path}/wp-content/plugins" && -d "${site_path}/wp-content/themes" ]] \
@@ -267,7 +271,9 @@ cmd_remove() {
       read -r reply
       [[ "${reply}" == "y" || "${reply}" == "Y" ]] || { echo "Site kept at ${site_path}."; return 0; }
     fi
-    studio site delete --path "${site_path}" --files
+    # Non-interactive for the same reason as create; the destructive confirm already happened
+    # above (or --yes was passed).
+    studio site delete --path "${site_path}" --files </dev/null
     echo "Studio site deleted: ${site_path}"
   else
     echo "Site kept at ${site_path}."
