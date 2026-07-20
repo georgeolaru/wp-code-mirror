@@ -171,6 +171,10 @@ remove_watcher() {
       || true
   fi
   rm -f "${plist}" "$(watch_stub_path_for "${label}")"
+  # Sweep the watcher's tmp artifacts so retired targets leave nothing behind.
+  rm -f "${DEFAULT_STORAGE_ROOT}/tmp/wp-code-mirror-${label}-status.json" \
+        "${DEFAULT_STORAGE_ROOT}/tmp/wp-code-mirror-${label}.log" \
+        "${DEFAULT_STORAGE_ROOT}/tmp/wp-code-mirror-${label}.error.log"
 }
 
 csv_to_json_array() {

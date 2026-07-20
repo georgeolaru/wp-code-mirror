@@ -167,6 +167,14 @@ build_target_status_json() {
   label="$(jq -r '.label' <<<"${target_json}")"
   site_path="$(jq -r '.site_path' <<<"${target_json}")"
   site_path="$(trim_trailing_slash "${site_path}")"
+
+  # A vanished target site (deleted outside wp-code-target.sh remove) is a reportable state,
+  # not a fatal error — the watch loop must survive it.
+  if [[ ! -d "${site_path}/wp-content/plugins" || ! -d "${site_path}/wp-content/themes" ]]; then
+    jq -cn --arg label "${label}" --arg site_path "${site_path}" \
+      '{label: $label, site_path: $site_path, state: "MISSING", items: []}'
+    return 0
+  fi
   ensure_target_site "${site_path}"
 
   any_pending=0
@@ -341,11 +349,32 @@ watch_targets() {
   local status_file="$4"
   local target_json found_any status_json
 
+  # Warn-once tracker: a target whose site folder disappears (deleted through the Studio app
+  # instead of wp-code-target.sh remove) must NOT kill the watcher — under launchd KeepAlive
+  # that becomes a restart crash-loop. Skip it quietly until it comes back.
+  local missing_warned=""
+
   while true; do
     found_any=0
     while IFS= read -r target_json; do
       [[ -n "${target_json}" ]] || continue
       found_any=1
+
+      local watch_label watch_site_path
+      watch_label="$(jq -r '.label' <<< "${target_json}")"
+      watch_site_path="$(jq -r '.site_path' <<< "${target_json}")"
+      if [[ ! -d "${watch_site_path}/wp-content/plugins" || ! -d "${watch_site_path}/wp-content/themes" ]]; then
+        if [[ "${missing_warned}" != *"|${watch_label}|"* ]]; then
+          echo "Warning: target site missing for '${watch_label}' (${watch_site_path}) — skipping until it returns. Retire it with wp-code-target.sh remove." >&2
+          missing_warned="${missing_warned}|${watch_label}|"
+        fi
+        continue
+      fi
+      if [[ "${missing_warned}" == *"|${watch_label}|"* ]]; then
+        echo "Target site for '${watch_label}' is back — resuming sync." >&2
+        missing_warned="${missing_warned/|${watch_label}|/}"
+      fi
+
       if target_has_changes "${target_json}"; then
         sync_target "${target_json}"
       fi
