@@ -45,10 +45,6 @@ run_shown() {
   "$@"
 }
 
-pause() {
-  echo
-  read -r -p "Press Enter to continue… " _
-}
 
 labels() {
   jq -r '.targets[].label' "${CONFIG_PATH}"
@@ -97,18 +93,16 @@ do_new_site() {
     *) echo "Cancelled."; return 0 ;;
   esac
 
-  local create="--create-site"
-  local reply
-  read -r -p "Create a fresh Studio site at ~/Studio/${label}? [Y/n] " reply
-  [[ "${reply}" == "n" || "${reply}" == "N" ]] && create=""
-
+  # No question: a fresh Studio site is created unless ~/Studio/<label> already exists,
+  # in which case the existing site is adopted as the target.
   local -a cmd=(bash "${TARGET_SH}" add "${label}")
-  [[ -n "${create}" ]] && cmd+=("${create}")
+  if [[ ! -d "${HOME}/Studio/${label}" ]]; then
+    cmd+=(--create-site)
+  fi
   [[ -n "${themes}" ]] && cmd+=(--themes "${themes}")
   [[ -n "${plugins}" ]] && cmd+=(--plugins "${plugins}")
 
   run_shown "${cmd[@]}"
-  pause
 }
 
 do_remove() {
@@ -125,7 +119,6 @@ do_remove() {
   fi
 
   run_shown bash "${TARGET_SH}" remove "${label}" ${site_flags[@]+"${site_flags[@]}"}
-  pause
 }
 
 do_sync_now() {
@@ -136,7 +129,6 @@ do_sync_now() {
   [[ -n "${label}" ]] || { echo "Cancelled."; return 0; }
 
   run_shown bash "${SYNC_SH}" sync --config "${CONFIG_PATH}" --target "${label}"
-  pause
 }
 
 do_tail_log() {
@@ -154,7 +146,6 @@ do_tail_log() {
   else
     echo "(no log yet at ${log})"
   fi
-  pause
 }
 
 do_cheatsheet() {
@@ -181,13 +172,12 @@ do_cheatsheet() {
   bash scripts/wp-code-sync.sh sync --target my-smoke
   bash scripts/wp-code-sync.sh status
 EOF
-  pause
 }
 
 main_menu() {
+  clear 2>/dev/null || true
+  echo "$(bold 'wp-code-mirror')  $(dim "${CONFIG_PATH}")"
   while true; do
-    clear 2>/dev/null || true
-    echo "$(bold 'wp-code-mirror')  $(dim "${CONFIG_PATH}")"
     echo
     bash "${TARGET_SH}" list --config "${CONFIG_PATH}" | sed 's/^/  /'
     echo
