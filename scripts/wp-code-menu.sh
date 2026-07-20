@@ -26,7 +26,7 @@ detect_default_storage_root() {
   printf '%s\n' "${ROOT_DIR}"
 }
 
-CONFIG_PATH="$(detect_default_storage_root)/config/wp-code-mirror.config.json"
+CONFIG_PATH="${WP_CODE_MIRROR_CONFIG:-$(detect_default_storage_root)/config/wp-code-mirror.config.json}"
 TMP_DIR="$(detect_default_storage_root)/tmp"
 TARGET_SH="${SCRIPT_DIR}/wp-code-target.sh"
 SYNC_SH="${SCRIPT_DIR}/wp-code-sync.sh"
@@ -53,6 +53,14 @@ fit() {
 tilde() {
   local t='~'
   printf '%s' "${1/#${HOME}/${t}}"
+}
+
+# Single-keypress read (no Enter needed). Bash 3.2-safe. Echoes the missing newline.
+read_key() {
+  local __var="$1" __prompt="$2" __reply=""
+  read -r -n 1 -p "${__prompt}" __reply || true
+  [[ -n "${__reply}" ]] && echo
+  printf -v "${__var}" '%s' "${__reply}"
 }
 
 show_command() {
@@ -90,6 +98,77 @@ pick_target() {
   printf '%s\n' "${all[$((choice - 1))]}"
 }
 
+# Claude-questions-style checkbox picker: arrows/j/k move, space toggles, a all, n none,
+# Enter confirms, q or bare ESC cancels. Selected labels print to stdout, one per line;
+# all UI goes to stderr. Globals because bash 3.2 cannot pass arrays.
+MP_CURSOR=0
+MP_DRAWN=0
+
+mp_draw() {
+  local j box line
+  if [[ ${MP_DRAWN} -eq 1 ]]; then
+    printf '\033[%dA' "${#MP_ITEMS[@]}" >&2
+  fi
+  for j in "${!MP_ITEMS[@]}"; do
+    if [[ "${MP_CHECKED[$j]}" -eq 1 ]]; then box="[x]"; else box="[ ]"; fi
+    printf '\033[2K' >&2
+    if [[ ${j} -eq ${MP_CURSOR} ]]; then
+      printf '  %s %s %s\n' "$(cyan '❯')" "${box}" "$(bold "${MP_ITEMS[$j]}")" >&2
+    else
+      printf '    %s %s\n' "${box}" "${MP_ITEMS[$j]}" >&2
+    fi
+  done
+  MP_DRAWN=1
+}
+
+multi_pick() {
+  MP_ITEMS=()
+  MP_CHECKED=()
+  MP_CURSOR=0
+  MP_DRAWN=0
+  local l key rest j count
+  while IFS= read -r l; do MP_ITEMS+=("$l"); MP_CHECKED+=(0); done < <(labels)
+  count=${#MP_ITEMS[@]}
+  [[ ${count} -gt 0 ]] || { echo "No targets configured." >&2; return 0; }
+
+  printf '  %s\n' "$(dim '↑↓ move · space select · a all · n none · enter confirm · q cancel')" >&2
+  mp_draw
+
+  while true; do
+    IFS= read -rsn1 key || return 0
+    case "${key}" in
+      $'\x1b')
+        rest=""
+        read -rsn2 -t 1 rest || true
+        case "${rest}" in
+          '[A') MP_CURSOR=$(( (MP_CURSOR + count - 1) % count )) ;;
+          '[B') MP_CURSOR=$(( (MP_CURSOR + 1) % count )) ;;
+          '') return 0 ;;
+        esac
+        ;;
+      k) MP_CURSOR=$(( (MP_CURSOR + count - 1) % count )) ;;
+      j) MP_CURSOR=$(( (MP_CURSOR + 1) % count )) ;;
+      ' ')
+        if [[ "${MP_CHECKED[$MP_CURSOR]}" -eq 1 ]]; then
+          MP_CHECKED[$MP_CURSOR]=0
+        else
+          MP_CHECKED[$MP_CURSOR]=1
+        fi
+        ;;
+      a) for j in "${!MP_CHECKED[@]}"; do MP_CHECKED[$j]=1; done ;;
+      n) for j in "${!MP_CHECKED[@]}"; do MP_CHECKED[$j]=0; done ;;
+      q) return 0 ;;
+      '') break ;;
+    esac
+    mp_draw
+  done
+
+  for j in "${!MP_ITEMS[@]}"; do
+    [[ "${MP_CHECKED[$j]}" -eq 1 ]] && printf '%s\n' "${MP_ITEMS[$j]}"
+  done
+  return 0
+}
+
 default_label() {
   # smoke-<MMDD>, auto-incremented until it collides with neither a config target nor a
   # ~/Studio directory.
@@ -118,7 +197,7 @@ do_new_site() {
   echo "  2) LT stack + Plus      $(dim 'free stack + pixelgrade-plus, pixelgrade-devmode')"
   echo "  3) Custom               $(dim 'type your own theme/plugin lists')"
   local stack themes plugins
-  read -r -p "Stack [1]: " stack
+  read_key stack "Stack [1]: "
   case "${stack:-1}" in
     1) themes="anima-lt"; plugins="pixelgrade-assistant,style-manager,nova-blocks" ;;
     2) themes="anima-lt"; plugins="pixelgrade-assistant,style-manager,nova-blocks,pixelgrade-plus,pixelgrade-devmode" ;;
@@ -131,7 +210,7 @@ do_new_site() {
 
   # No question: a fresh Studio site is created unless ~/Studio/<label> already exists,
   # in which case the existing site is adopted as the target.
-  local -a cmd=(bash "${TARGET_SH}" add "${label}")
+  local -a cmd=(bash "${TARGET_SH}" add "${label}" --config "${CONFIG_PATH}")
   if [[ ! -d "${HOME}/Studio/${label}" ]]; then
     cmd+=(--create-site)
   fi
@@ -143,18 +222,24 @@ do_new_site() {
 
 do_remove() {
   echo
-  echo "$(bold 'Remove a target')"
-  local label
-  label="$(pick_target)"
-  [[ -n "${label}" ]] || { echo "Cancelled."; return 0; }
+  echo "$(bold 'Remove targets')"
+  local -a picked=()
+  local l
+  while IFS= read -r l; do [[ -n "${l}" ]] && picked+=("${l}"); done < <(multi_pick)
+  [[ ${#picked[@]:-0} -gt 0 ]] || { echo "Cancelled."; return 0; }
 
+  echo
+  echo "Selected: $(bold "${picked[*]}")"
   local reply site_flags=()
-  read -r -p "Also DELETE the Studio site and its files? [y/N] " reply
+  read_key reply "Also DELETE the Studio site(s) and their files? [y/N] "
   if [[ "${reply}" == "y" || "${reply}" == "Y" ]]; then
     site_flags=(--delete-site --yes)
   fi
 
-  run_shown bash "${TARGET_SH}" remove "${label}" ${site_flags[@]+"${site_flags[@]}"}
+  local label
+  for label in "${picked[@]}"; do
+    run_shown bash "${TARGET_SH}" remove "${label}" --config "${CONFIG_PATH}" ${site_flags[@]+"${site_flags[@]}"}
+  done
 }
 
 do_sync_now() {
@@ -271,7 +356,7 @@ main_menu() {
       "$(cyan '1')" "$(cyan '2')" "$(cyan '3')" "$(cyan '4')" "$(cyan '5')" "$(cyan 'q')"
     echo
     local choice
-    read -r -p "> " choice
+    read_key choice "> "
     case "${choice}" in
       1) do_new_site ;;
       2) do_remove ;;
