@@ -48,6 +48,9 @@ Usage:
       --yes                  Skip the --delete-site confirmation prompt
       --config <path>        Config file
 
+  bash scripts/wp-code-target.sh open <label> [--config <path>]
+      Open the target's wp-admin in the browser, auto-logged-in.
+
   bash scripts/wp-code-target.sh list [--config <path>]
 
 Examples:
@@ -324,6 +327,23 @@ cmd_remove() {
   fi
 }
 
+cmd_open() {
+  local label="$1"; shift
+  local config_path="${DEFAULT_CONFIG_PATH}"
+
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --config) config_path="$2"; shift 2 ;;
+      *) fail "unknown option for open: $1" ;;
+    esac
+  done
+
+  [[ -f "${config_path}" ]] || fail "config file not found: ${config_path}"
+  target_exists "${config_path}" "${label}" || fail "no such target: ${label}"
+
+  open_wp_admin "$(target_site_path "${config_path}" "${label}")"
+}
+
 cmd_list() {
   local config_path="${DEFAULT_CONFIG_PATH}"
 
@@ -365,6 +385,11 @@ main() {
       [[ $# -ge 1 ]] || fail "remove requires a <label>"
       local label="$1"; shift
       cmd_remove "${label}" "$@"
+      ;;
+    open)
+      [[ $# -ge 1 ]] || fail "open requires a <label>"
+      local label="$1"; shift
+      cmd_open "${label}" "$@"
       ;;
     list)
       cmd_list "$@"

@@ -30,6 +30,7 @@ CONFIG_PATH="${WP_CODE_MIRROR_CONFIG:-$(detect_default_storage_root)/config/wp-c
 TMP_DIR="$(detect_default_storage_root)/tmp"
 TARGET_SH="${SCRIPT_DIR}/wp-code-target.sh"
 SYNC_SH="${SCRIPT_DIR}/wp-code-sync.sh"
+DEV_SITE_SH="${SCRIPT_DIR}/wp-code-dev-site.sh"
 
 command_usage() {
   cat <<'EOF'
@@ -232,14 +233,32 @@ do_new_site() {
   echo
   echo "Which stack should it mirror?"
   echo "  1) Free LT stack        $(dim 'anima-lt + pixelgrade-assistant, style-manager, nova-blocks')"
-  echo "  2) LT stack + Plus      $(dim 'free stack + pixelgrade-plus, pixelgrade-devmode')"
-  echo "  3) Custom               $(dim 'type your own theme/plugin lists')"
-  local stack themes plugins
+  echo "  2) LT stack + Plus      $(dim 'free stack + pixelgrade-plus, pixelgrade-devmode — nothing activated')"
+  echo "  3) Plus dev site        $(dim 'stack activated + licensed + optional starter, headless')"
+  echo "  4) Custom               $(dim 'type your own theme/plugin lists')"
+  local stack themes plugins provision=0 starter=""
   read_key stack "Stack [1]: "
   case "${stack:-1}" in
     1) themes="anima-lt"; plugins="pixelgrade-assistant,style-manager,nova-blocks" ;;
     2) themes="anima-lt"; plugins="pixelgrade-assistant,style-manager,nova-blocks,pixelgrade-plus,pixelgrade-devmode" ;;
     3)
+      themes="anima-lt"; plugins="pixelgrade-assistant,style-manager,nova-blocks,pixelgrade-plus,pixelgrade-devmode"
+      provision=1
+      echo
+      echo "Load a starter site automatically? $(dim 'full import, only into an empty site')"
+      echo "  1) Rosa LT   2) Mies LT   3) Felt LT   4) Julia LT   5) Pile LT   0) none"
+      local pick
+      read_key pick "Starter [0]: "
+      case "${pick:-0}" in
+        1) starter="rosa-lt" ;;
+        2) starter="mies-lt" ;;
+        3) starter="felt-lt" ;;
+        4) starter="julia-lt" ;;
+        5) starter="pile-lt" ;;
+        *) starter="" ;;
+      esac
+      ;;
+    4)
       read -r -p "Themes (comma-separated, empty for none): " themes
       read -r -p "Plugins (comma-separated, empty for none): " plugins
       ;;
@@ -252,10 +271,18 @@ do_new_site() {
   if [[ ! -d "${HOME}/Studio/${label}" ]]; then
     cmd+=(--create-site)
   fi
+  [[ ${provision} -eq 1 ]] && cmd+=(--no-open)
   [[ -n "${themes}" ]] && cmd+=(--themes "${themes}")
   [[ -n "${plugins}" ]] && cmd+=(--plugins "${plugins}")
 
   run_shown "${cmd[@]}"
+
+  if [[ ${provision} -eq 1 ]]; then
+    local -a prov=(bash "${DEV_SITE_SH}" provision "${HOME}/Studio/${label}")
+    [[ -n "${starter}" ]] && prov+=(--starter "${starter}")
+    run_shown "${prov[@]}"
+    run_shown bash "${TARGET_SH}" open "${label}" --config "${CONFIG_PATH}"
+  fi
 }
 
 do_remove() {
