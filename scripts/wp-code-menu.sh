@@ -95,9 +95,14 @@ tilde() {
 }
 
 # Single-keypress read (no Enter needed). Bash 3.2-safe. Echoes the missing newline.
+# Returns non-zero on EOF — callers MUST treat that as cancel/quit, otherwise a menu run
+# with closed stdin busy-loops forever (it happened; four spinners at 14% CPU each).
 read_key() {
   local __var="$1" __prompt="$2" __reply=""
-  read -r -n 1 -p "${__prompt}" __reply || true
+  if ! read -r -n 1 -p "${__prompt}" __reply; then
+    printf -v "${__var}" ''
+    return 1
+  fi
   [[ -n "${__reply}" ]] && echo
   printf -v "${__var}" '%s' "${__reply}"
 }
@@ -237,7 +242,7 @@ do_new_site() {
   echo "  3) Plus dev site        $(dim 'stack activated + licensed + WooCommerce + optional starter, headless')"
   echo "  4) Custom               $(dim 'type your own theme/plugin lists')"
   local stack themes plugins provision=0 starter=""
-  read_key stack "Stack [1]: "
+  read_key stack "Stack [1]: " || { echo "Cancelled."; return 0; }
   case "${stack:-1}" in
     1) themes="anima-lt"; plugins="pixelgrade-assistant,style-manager,nova-blocks" ;;
     2) themes="anima-lt"; plugins="pixelgrade-assistant,style-manager,nova-blocks,pixelgrade-plus,pixelgrade-devmode" ;;
@@ -248,7 +253,7 @@ do_new_site() {
       echo "Load a starter site automatically? $(dim 'full import, only into an empty site')"
       echo "  1) Rosa LT   2) Mies LT   3) Felt LT   4) Julia LT   5) Pile LT   0) none"
       local pick
-      read_key pick "Starter [0]: "
+      read_key pick "Starter [0]: " || { echo "Cancelled."; return 0; }
       case "${pick:-0}" in
         1) starter="rosa-lt" ;;
         2) starter="mies-lt" ;;
@@ -415,7 +420,7 @@ main_menu() {
       "$(cyan '1')" "$(cyan '2')" "$(cyan '3')" "$(cyan '4')" "$(cyan '5')" "$(cyan 'q')"
     echo
     local choice
-    read_key choice "> "
+    read_key choice "> " || { echo; echo "Bye."; exit 0; }
     case "${choice}" in
       1) do_new_site ;;
       2) do_remove ;;
