@@ -69,12 +69,27 @@ pick_target() {
   printf '%s\n' "${all[$((choice - 1))]}"
 }
 
+default_label() {
+  # smoke-<MMDD>, auto-incremented until it collides with neither a config target nor a
+  # ~/Studio directory.
+  local base candidate n=1 existing
+  base="smoke-$(date +%m%d)"
+  candidate="${base}"
+  existing="$(labels)"
+  while grep -Fxq "${candidate}" <<< "${existing}" || [[ -d "${HOME}/Studio/${candidate}" ]]; do
+    n=$((n + 1))
+    candidate="${base}-${n}"
+  done
+  printf '%s\n' "${candidate}"
+}
+
 do_new_site() {
   echo
   echo "$(bold 'New mirrored smoke site')"
-  local label
-  read -r -p "Label (kebab-case, becomes ~/Studio/<label>): " label
-  [[ -n "${label}" ]] || { echo "Cancelled."; return 0; }
+  local label suggested
+  suggested="$(default_label)"
+  read -r -p "Label [${suggested}]: " label
+  label="${label:-${suggested}}"
 
   echo
   echo "Which stack should it mirror?"
