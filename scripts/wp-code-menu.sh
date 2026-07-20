@@ -234,7 +234,7 @@ do_new_site() {
   echo "Which stack should it mirror?"
   echo "  1) Free LT stack        $(dim 'anima-lt + pixelgrade-assistant, style-manager, nova-blocks')"
   echo "  2) LT stack + Plus      $(dim 'free stack + pixelgrade-plus, pixelgrade-devmode — nothing activated')"
-  echo "  3) Plus dev site        $(dim 'stack activated + licensed + optional starter, headless')"
+  echo "  3) Plus dev site        $(dim 'stack activated + licensed + WooCommerce + optional starter, headless')"
   echo "  4) Custom               $(dim 'type your own theme/plugin lists')"
   local stack themes plugins provision=0 starter=""
   read_key stack "Stack [1]: "
@@ -278,7 +278,7 @@ do_new_site() {
   run_shown "${cmd[@]}"
 
   if [[ ${provision} -eq 1 ]]; then
-    local -a prov=(bash "${DEV_SITE_SH}" provision "${HOME}/Studio/${label}")
+    local -a prov=(bash "${DEV_SITE_SH}" provision "${HOME}/Studio/${label}" --woo)
     [[ -n "${starter}" ]] && prov+=(--starter "${starter}")
     run_shown "${prov[@]}"
     run_shown bash "${TARGET_SH}" open "${label}" --config "${CONFIG_PATH}"

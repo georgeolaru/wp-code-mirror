@@ -25,6 +25,8 @@ Usage:
       --license-from <path>      Reference site to copy the Pixelgrade account/license state
                                  from (default: ~/Studio/pixelgrade-integrated-check)
       --no-license               Skip the license/account seeding
+      --woo                      Install + activate WooCommerce (from wp.org) before the
+                                 import, so commerce starter segments come along
       --force-starter            Import the starter even into a non-empty site
 EOF
 }
@@ -45,13 +47,14 @@ swp() {
 
 cmd_provision() {
   SITE_PATH="$1"; shift
-  local starter="" license_from="${DEFAULT_LICENSE_SOURCE}" seed_license=1 force_starter=0
+  local starter="" license_from="${DEFAULT_LICENSE_SOURCE}" seed_license=1 force_starter=0 with_woo=0
 
   while [[ $# -gt 0 ]]; do
     case "$1" in
       --starter) starter="$2"; shift 2 ;;
       --license-from) license_from="$2"; shift 2 ;;
       --no-license) seed_license=0; shift ;;
+      --woo) with_woo=1; shift ;;
       --force-starter) force_starter=1; shift ;;
       *) fail "unknown option for provision: $1" ;;
     esac
@@ -127,6 +130,16 @@ cmd_provision() {
         echo "plus dev entitlements forced";
       ' --path "${SITE_PATH}" </dev/null
       echo
+    fi
+  fi
+
+  # 2b. WooCommerce (wp.org, not our code under test) — must be active BEFORE the starter
+  #     import so gated commerce segments resolve as available.
+  if [[ ${with_woo} -eq 1 ]]; then
+    if [[ -d "${SITE_PATH}/wp-content/plugins/woocommerce" ]]; then
+      swp plugin activate woocommerce
+    else
+      swp plugin install woocommerce --activate
     fi
   fi
 
