@@ -308,9 +308,17 @@ cmd_remove() {
       [[ "${reply}" == "y" || "${reply}" == "Y" ]] || { echo "Site kept at ${site_path}."; return 0; }
     fi
     # Non-interactive for the same reason as create; the destructive confirm already happened
-    # above (or --yes was passed).
-    studio site delete --path "${site_path}" --files </dev/null
-    echo "Studio site deleted: ${site_path}"
+    # above (or --yes was passed). Tolerant: a missing or unregistered site must not abort a
+    # batch removal — the target/watcher cleanup above is already done.
+    if [[ -d "${site_path}" ]]; then
+      if studio site delete --path "${site_path}" --files </dev/null; then
+        echo "Studio site deleted: ${site_path}"
+      else
+        echo "Warning: studio could not delete ${site_path} — remove it manually." >&2
+      fi
+    else
+      echo "Site path already gone: ${site_path}"
+    fi
   else
     echo "Site kept at ${site_path}."
   fi

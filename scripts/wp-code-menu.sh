@@ -31,6 +31,44 @@ TMP_DIR="$(detect_default_storage_root)/tmp"
 TARGET_SH="${SCRIPT_DIR}/wp-code-target.sh"
 SYNC_SH="${SCRIPT_DIR}/wp-code-sync.sh"
 
+command_usage() {
+  cat <<'EOF'
+Usage:
+  pxgmirror
+  pxgmirror add <label> [wp-code-target add options]
+  pxgmirror remove <label> [wp-code-target remove options]
+  pxgmirror list [wp-code-target list options]
+  pxgmirror sync [wp-code-sync sync options]
+  pxgmirror status [wp-code-sync status options]
+  pxgmirror watch [wp-code-sync watch options]
+  pxgmirror help
+
+Without a command, pxgmirror opens the interactive menu.
+EOF
+}
+
+dispatch_command() {
+  local command_name="$1"
+  shift
+
+  case "${command_name}" in
+    add|remove|list)
+      exec bash "${TARGET_SH}" "${command_name}" "$@"
+      ;;
+    sync|status|watch)
+      exec bash "${SYNC_SH}" "${command_name}" "$@"
+      ;;
+    help|-h|--help)
+      command_usage
+      ;;
+    *)
+      command_usage >&2
+      echo "Error: unknown pxgmirror command: ${command_name}" >&2
+      return 1
+      ;;
+  esac
+}
+
 bold() { printf '\033[1m%s\033[0m' "$1"; }
 dim() { printf '\033[2m%s\033[0m' "$1"; }
 green() { printf '\033[32m%s\033[0m' "$1"; }
@@ -222,23 +260,17 @@ do_new_site() {
 
 do_remove() {
   echo
-  echo "$(bold 'Remove targets')"
+  # Selecting + Enter IS the confirmation: removal deletes the target, its watcher, AND the
+  # Studio site with its files. The header says so; there is no follow-up question.
+  echo "$(bold 'Remove targets')  $(dim 'deletes the Studio site and its files too')"
   local -a picked=()
   local l
   while IFS= read -r l; do [[ -n "${l}" ]] && picked+=("${l}"); done < <(multi_pick)
   [[ ${#picked[@]:-0} -gt 0 ]] || { echo "Cancelled."; return 0; }
 
-  echo
-  echo "Selected: $(bold "${picked[*]}")"
-  local reply site_flags=()
-  read_key reply "Also DELETE the Studio site(s) and their files? [y/N] "
-  if [[ "${reply}" == "y" || "${reply}" == "Y" ]]; then
-    site_flags=(--delete-site --yes)
-  fi
-
   local label
   for label in "${picked[@]}"; do
-    run_shown bash "${TARGET_SH}" remove "${label}" --config "${CONFIG_PATH}" ${site_flags[@]+"${site_flags[@]}"}
+    run_shown bash "${TARGET_SH}" remove "${label}" --config "${CONFIG_PATH}" --delete-site --yes
   done
 }
 
@@ -369,7 +401,11 @@ main_menu() {
   done
 }
 
+if [[ "$#" -gt 0 ]]; then
+  dispatch_command "$@"
+  exit $?
+fi
+
 command -v jq >/dev/null 2>&1 || { echo "Error: missing required tool: jq" >&2; exit 1; }
 [[ -f "${CONFIG_PATH}" ]] || { echo "Error: config file not found: ${CONFIG_PATH}" >&2; exit 1; }
-
 main_menu
