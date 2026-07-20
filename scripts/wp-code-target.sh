@@ -52,6 +52,9 @@ Usage:
   bash scripts/wp-code-target.sh open <label> [--config <path>]
       Open the target's wp-admin in the browser, auto-logged-in.
 
+  bash scripts/wp-code-target.sh rewatch <label>
+      Regenerate + reload the target's launchd watcher (e.g. after script changes).
+
   bash scripts/wp-code-target.sh list [--config <path>]
 
 Examples:
@@ -102,12 +105,30 @@ watcher_loaded() {
   launchctl print "gui/$(id -u)/$(launchd_label_for "$1")" >/dev/null 2>&1
 }
 
+watch_stub_path_for() {
+  printf '%s/bin/wp-code-mirror-watch-%s\n' "${DEFAULT_STORAGE_ROOT}" "$1"
+}
+
 install_watcher() {
   local label="$1" config_path="$2" interval="$3"
-  local plist tmp_dir
+  local plist tmp_dir stub
   plist="$(plist_path_for "${label}")"
   tmp_dir="${DEFAULT_STORAGE_ROOT}/tmp"
-  mkdir -p "${tmp_dir}" "${LAUNCH_AGENTS_DIR}"
+  stub="$(watch_stub_path_for "${label}")"
+  mkdir -p "${tmp_dir}" "${DEFAULT_STORAGE_ROOT}/bin" "${LAUNCH_AGENTS_DIR}"
+
+  # A per-target runner executable, and the plist launches IT (not /bin/bash directly):
+  # macOS Login Items names background items after the program, so each watcher shows up as
+  # "wp-code-mirror-watch-<label>" instead of an anonymous "bash".
+  cat >"${stub}" <<STUB
+#!/bin/bash
+exec /bin/bash "${SCRIPT_DIR}/wp-code-sync.sh" watch \\
+  --config "${config_path}" \\
+  --target "${label}" \\
+  --interval "${interval}" \\
+  --status-file "${tmp_dir}/wp-code-mirror-${label}-status.json"
+STUB
+  chmod +x "${stub}"
 
   cat >"${plist}" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
@@ -118,17 +139,7 @@ install_watcher() {
   <string>$(launchd_label_for "${label}")</string>
   <key>ProgramArguments</key>
   <array>
-    <string>/bin/bash</string>
-    <string>${SCRIPT_DIR}/wp-code-sync.sh</string>
-    <string>watch</string>
-    <string>--config</string>
-    <string>${config_path}</string>
-    <string>--target</string>
-    <string>${label}</string>
-    <string>--interval</string>
-    <string>${interval}</string>
-    <string>--status-file</string>
-    <string>${tmp_dir}/wp-code-mirror-${label}-status.json</string>
+    <string>${stub}</string>
   </array>
   <key>RunAtLoad</key>
   <true/>
@@ -159,7 +170,7 @@ remove_watcher() {
       || launchctl bootout "gui/$(id -u)/$(launchd_label_for "${label}")" 2>/dev/null \
       || true
   fi
-  rm -f "${plist}"
+  rm -f "${plist}" "$(watch_stub_path_for "${label}")"
 }
 
 csv_to_json_array() {
@@ -393,6 +404,13 @@ main() {
       [[ $# -ge 1 ]] || fail "open requires a <label>"
       local label="$1"; shift
       cmd_open "${label}" "$@"
+      ;;
+    rewatch)
+      [[ $# -ge 1 ]] || fail "rewatch requires a <label>"
+      local label="$1"; shift
+      target_exists "${DEFAULT_CONFIG_PATH}" "${label}" || fail "no such target: ${label}"
+      install_watcher "${label}" "${DEFAULT_CONFIG_PATH}" 2
+      echo "Watcher regenerated: $(launchd_label_for "${label}")"
       ;;
     list)
       cmd_list "$@"
