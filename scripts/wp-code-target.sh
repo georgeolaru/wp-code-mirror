@@ -34,7 +34,8 @@ usage() {
 Usage:
   bash scripts/wp-code-target.sh add <label> [options]
       --site-path <path>     Target site root (default: ~/Studio/<label>)
-      --site-name <name>     Studio site display name (default: the label)
+      --site-name <name>     Studio site display name (default: "0 <label>" — the digit
+                             prefix sorts smoke sites to the top of the Studio app list)
       --themes <a,b>         Comma-separated theme dirs to mirror
       --plugins <a,b>        Comma-separated plugin dirs to mirror
       --mu-plugins <a,b>     Comma-separated mu-plugin entries to mirror
@@ -224,7 +225,9 @@ cmd_add() {
   target_exists "${config_path}" "${label}" && fail "target already exists: ${label}"
 
   site_path="${site_path:-${HOME}/Studio/${label}}"
-  site_name="${site_name:-${label}}"
+  # Digit prefix: alphabetical site lists sort digits before letters, so disposable smoke
+  # sites cluster at the top of the Studio app instead of scattering among real sites.
+  site_name="${site_name:-0 ${label}}"
 
   local themes plugins mu_plugins
   themes="$(csv_to_json_array "${themes_csv}")"
