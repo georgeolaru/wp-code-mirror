@@ -19,6 +19,7 @@ $seed = [
 		[
 			'label'      => 'site-a',
 			'site_path'  => '/tmp/site-a',
+			// Older configs omit active; they must remain enabled after upgrade.
 			'themes'     => ['anima'],
 			'plugins'    => ['pixelgrade-care'],
 			'mu_plugins' => ['example-loader.php'],
@@ -40,6 +41,10 @@ if ($loaded['targets'][0]['mu_plugins'][0] !== 'example-loader.php') {
 	throw new RuntimeException('Expected mu_plugins to load from JSON');
 }
 
+if ($loaded['targets'][0]['active'] !== true) {
+	throw new RuntimeException('Expected targets from older configs to default to active');
+}
+
 $normalized = $repository->normalize_from_input(
 	[
 		'source_site'    => '/tmp/source-updated',
@@ -48,6 +53,7 @@ $normalized = $repository->normalize_from_input(
 			[
 				'label'      => 'site-b',
 				'site_path'  => '/tmp/site-b',
+				'active'     => '0',
 				'themes'     => "anima\n",
 				'plugins'    => "pixelgrade-care\nnova-blocks\nstyle-manager\n",
 				'mu_plugins' => "type-system-transfusion.php\ntype-system-transfusion\n",
@@ -64,6 +70,10 @@ if ($normalized['targets'][0]['mu_plugins'][1] !== 'type-system-transfusion') {
 	throw new RuntimeException('Expected mu_plugins lines to normalize into arrays');
 }
 
+if ($normalized['targets'][0]['active'] !== false) {
+	throw new RuntimeException('Expected inactive target input to normalize to false');
+}
+
 $repository->save($normalized);
 
 $saved = json_decode((string) file_get_contents($config_path), true, 512, JSON_THROW_ON_ERROR);
@@ -78,6 +88,10 @@ if ($saved['targets'][0]['themes'][0] !== 'anima') {
 
 if ($saved['targets'][0]['mu_plugins'][0] !== 'type-system-transfusion.php') {
 	throw new RuntimeException('Expected mu_plugins to persist after save');
+}
+
+if ($saved['targets'][0]['active'] !== false) {
+	throw new RuntimeException('Expected inactive target state to persist after save');
 }
 
 echo "PASS: config repository\n";

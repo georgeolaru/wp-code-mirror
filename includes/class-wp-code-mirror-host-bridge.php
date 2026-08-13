@@ -46,7 +46,7 @@ class WP_Code_Mirror_Host_Bridge {
 	 */
 	public function get_sync_status( string $target_label ): array {
 		$file_status = $this->read_status_file( $target_label );
-		if ( null !== $file_status ) {
+		if ( null !== $file_status && $this->cached_sync_status_is_current( $target_label, $file_status ) ) {
 			$file_status['ok'] = true;
 			return $file_status;
 		}
@@ -194,13 +194,98 @@ class WP_Code_Mirror_Host_Bridge {
 	}
 
 	/**
+	 * Avoid a recursive status scan on every wp-admin request, but never trust a
+	 * cached CLEAN result after the effective target configuration or lifecycle changed.
+	 *
+	 * @param array<string,mixed> $status
+	 */
+	private function cached_sync_status_is_current( string $target_label, array $status ): bool {
+		$status_path = $this->status_file_path( $target_label );
+		if ( ! file_exists( $status_path ) || ! file_exists( $this->config_path ) ) {
+			return false;
+		}
+		$status_time = filemtime( $status_path );
+		$config_time = filemtime( $this->config_path );
+		if ( false === $status_time || false === $config_time || $config_time > $status_time ) {
+			return false;
+		}
+
+		$contents = file_get_contents( $this->config_path );
+		$config   = false !== $contents ? json_decode( $contents, true ) : null;
+		if ( ! is_array( $config ) ) {
+			return false;
+		}
+
+		$current_target = null;
+		foreach ( (array) ( $config['targets'] ?? [] ) as $target ) {
+			if ( is_array( $target ) && (string) ( $target['label'] ?? '' ) === $target_label ) {
+				$current_target = $target;
+				break;
+			}
+		}
+		if ( null === $current_target ) {
+			return false;
+		}
+
+		$active    = ! array_key_exists( 'active', $current_target ) || (bool) $current_target['active'];
+		$site_path = rtrim( (string) ( $current_target['site_path'] ?? '' ), '/' );
+		if ( ! $active || ! is_dir( $site_path . '/wp-content/themes' ) || ! is_dir( $site_path . '/wp-content/plugins' ) ) {
+			return false;
+		}
+		$source_path = rtrim( (string) ( $config['source_site'] ?? '' ), '/' );
+		if ( ! is_dir( $source_path . '/wp-content/themes' ) || ! is_dir( $source_path . '/wp-content/plugins' ) ) {
+			return false;
+		}
+
+		if ( rtrim( (string) ( $config['source_site'] ?? '' ), '/' ) !== rtrim( (string) ( $status['source_site'] ?? '' ), '/' ) ) {
+			return false;
+		}
+		if ( array_values( (array) ( $config['rsync_excludes'] ?? [] ) ) !== array_values( (array) ( $status['rsync_excludes'] ?? [] ) ) ) {
+			return false;
+		}
+
+		$expected_items = [];
+		foreach ( [ 'themes' => 'themes', 'plugins' => 'plugins', 'mu_plugins' => 'mu-plugins' ] as $config_key => $kind ) {
+			foreach ( (array) ( $current_target[ $config_key ] ?? [] ) as $slug ) {
+				$expected_items[] = $kind . '/' . (string) $slug;
+			}
+		}
+		sort( $expected_items );
+
+		foreach ( (array) ( $status['targets'] ?? [] ) as $status_target ) {
+			if ( ! is_array( $status_target ) || (string) ( $status_target['label'] ?? '' ) !== $target_label ) {
+				continue;
+			}
+
+			if ( rtrim( (string) ( $status_target['site_path'] ?? '' ), '/' ) !== $site_path ) {
+				return false;
+			}
+			if ( array_key_exists( 'active', $status_target ) && (bool) $status_target['active'] !== $active ) {
+				return false;
+			}
+
+			$actual_items = [];
+			foreach ( (array) ( $status_target['items'] ?? [] ) as $item ) {
+				if ( is_array( $item ) ) {
+					$actual_items[] = (string) ( $item['kind'] ?? '' ) . '/' . (string) ( $item['slug'] ?? '' );
+				}
+			}
+			sort( $actual_items );
+
+			return $expected_items === $actual_items;
+		}
+
+		return false;
+	}
+
+	/**
 	 * @return array<string,mixed>
 	 */
 	private function fallback_service_status( string $target_label, string $message ): array {
 		$plist_path   = $this->plist_path( $target_label );
 		$status_path  = $this->status_file_path( $target_label );
 		$sync_status  = $this->read_status_file( $target_label );
-		$installed    = file_exists( $plist_path ) || null !== $sync_status;
+		$installed    = file_exists( $plist_path );
 		$running      = false;
 		$current_time = time();
 
@@ -265,15 +350,32 @@ class WP_Code_Mirror_Host_Bridge {
 	}
 
 	private function tail_file( string $path, int $line_limit ): string {
-		if ( ! file_exists( $path ) ) {
+		if ( $line_limit < 1 || ! file_exists( $path ) ) {
 			return '';
 		}
 
-		$contents = file( $path, FILE_IGNORE_NEW_LINES );
-		if ( false === $contents ) {
+		$handle = fopen( $path, 'rb' );
+		if ( false === $handle ) {
 			return '';
 		}
 
-		return implode( "\n", array_slice( $contents, -1 * $line_limit ) );
+		// Read the file backwards in chunks so we only ever hold the tail in memory
+		// (loading the whole file with file() exhausts memory once a log grows large).
+		$buffer_size = 8192;
+		$position    = (int) filesize( $path );
+		$chunk       = '';
+
+		while ( $position > 0 && substr_count( $chunk, "\n" ) <= $line_limit ) {
+			$read      = ( $position >= $buffer_size ) ? $buffer_size : $position;
+			$position -= $read;
+			fseek( $handle, $position );
+			$chunk = (string) fread( $handle, $read ) . $chunk;
+		}
+
+		fclose( $handle );
+
+		$lines = explode( "\n", rtrim( $chunk, "\n" ) );
+
+		return implode( "\n", array_slice( $lines, -1 * $line_limit ) );
 	}
 }

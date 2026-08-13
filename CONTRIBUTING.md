@@ -40,12 +40,19 @@ PHP checks:
 php -l wp-code-mirror.php
 php tests/test-config-repository.php
 php tests/test-paths.php
+php tests/test-host-bridge-tail.php
+php tests/test-host-bridge-status-cache.php
+php tests/test-host-bridge-service-fallback.php
+php tests/test-admin-service-reconciliation.php
 ```
 
 Sync script test:
 
 ```bash
 bash tests/test-wp-code-sync.sh
+bash tests/test-wp-code-sync-performance.sh
+bash tests/test-wp-code-sync-service.sh
+bash tests/test-wp-code-target-lifecycle.sh
 ```
 
 ## Pull Requests

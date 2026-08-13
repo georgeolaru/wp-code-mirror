@@ -4,6 +4,7 @@
     {
       "label": "smoke-site",
       "site_path": "/Users/you/Local Sites/theme-smoke/app/public",
+      "active": true,
       "themes": [
         "anima"
       ],
@@ -15,6 +16,7 @@
     {
       "label": "qa-site",
       "site_path": "/Users/you/Local Sites/theme-qa/app/public",
+      "active": false,
       "themes": [
         "anima"
       ],
@@ -35,6 +37,11 @@
     ".github/",
     ".idea/",
     ".vscode/",
-    "node_modules/"
+    ".worktrees/",
+    "node_modules/",
+    "tmp/",
+    ".phpunit.cache/",
+    "coverage/",
+    "*.map"
   ]
 }

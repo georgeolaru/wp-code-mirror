@@ -184,10 +184,12 @@ main() {
   assert_jq_equals "${status_json}" '.targets[0].label' "test-site"
   assert_jq_equals "${status_json}" '.targets[0].state' "CLEAN"
 
+  printf 'source theme updated\n' >"${source_site}/wp-content/themes/anima/style.css"
   bash "${SCRIPT_PATH}" sync --config "${config_path}" --target test-site --status-file "${status_file}" >/dev/null
   [[ -f "${status_file}" ]] || fail "expected status file to exist"
   assert_file_contains "${status_file}" "\"last_sync_at\""
-  assert_file_contains "${status_file}" "\"state\": \"CLEAN\""
+  assert_jq_equals "$(<"${status_file}")" '.targets[0].state' "CLEAN"
+  assert_file_contains "${target_site}/wp-content/themes/anima/style.css" "source theme updated"
 
   local status_after
   status_after="$(bash "${SCRIPT_PATH}" status --config "${config_path}" --target test-site)"

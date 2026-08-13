@@ -48,6 +48,7 @@ class WP_Code_Mirror_Config_Repository {
 				$target = [
 					'label'      => $this->normalize_scalar( $raw_target['label'] ?? '' ),
 					'site_path'  => $this->normalize_scalar( $raw_target['site_path'] ?? '' ),
+					'active'     => $this->normalize_boolean( $raw_target['active'] ?? true, true ),
 					'themes'     => $this->normalize_line_list( $raw_target['themes'] ?? [] ),
 					'plugins'    => $this->normalize_line_list( $raw_target['plugins'] ?? [] ),
 					'mu_plugins' => $this->normalize_line_list( $raw_target['mu_plugins'] ?? [] ),
@@ -120,6 +121,31 @@ class WP_Code_Mirror_Config_Repository {
 
 	/**
 	 * @param mixed $value
+	 */
+	private function normalize_boolean( $value, bool $default ): bool {
+		if ( is_bool( $value ) ) {
+			return $value;
+		}
+
+		if ( is_int( $value ) || is_float( $value ) ) {
+			return 0 !== (int) $value;
+		}
+
+		if ( is_string( $value ) ) {
+			$normalized = strtolower( trim( $value ) );
+			if ( in_array( $normalized, [ '0', 'false', 'off', 'no', '' ], true ) ) {
+				return false;
+			}
+			if ( in_array( $normalized, [ '1', 'true', 'on', 'yes' ], true ) ) {
+				return true;
+			}
+		}
+
+		return $default;
+	}
+
+	/**
+	 * @param mixed $value
 	 * @return array<int,string>
 	 */
 	private function normalize_line_list( $value ): array {
@@ -165,6 +191,7 @@ class WP_Code_Mirror_Config_Repository {
 			$normalized[] = [
 				'label'      => $this->normalize_scalar( $target['label'] ?? '' ),
 				'site_path'  => $this->normalize_scalar( $target['site_path'] ?? '' ),
+				'active'     => $this->normalize_boolean( $target['active'] ?? true, true ),
 				'themes'     => $this->normalize_line_list( $target['themes'] ?? [] ),
 				'plugins'    => $this->normalize_line_list( $target['plugins'] ?? [] ),
 				'mu_plugins' => $this->normalize_line_list( $target['mu_plugins'] ?? [] ),
@@ -186,7 +213,13 @@ class WP_Code_Mirror_Config_Repository {
 				'.git/',
 				'.github/',
 				'.idea/',
+				'.vscode/',
+				'.worktrees/',
 				'node_modules/',
+				'tmp/',
+				'.phpunit.cache/',
+				'coverage/',
+				'*.map',
 			],
 		];
 	}

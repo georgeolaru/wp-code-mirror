@@ -125,8 +125,9 @@ WP Code Mirror uses two parts:
 
 2. A host-side watcher/service layer
    - mirrors selected theme and plugin directories
-   - keeps target sites aligned automatically
-   - writes status snapshots and logs that wp-admin can display
+   - analyzes each component once per cycle and syncs only changed components
+   - groups bursts with a 1-second debounce and backs idle polling off from 15 to 300 seconds
+   - writes compact status snapshots and size-limited logs that wp-admin can display
 
 The working model is simple:
 
@@ -135,10 +136,20 @@ The working model is simple:
 - configure one or more target WordPress sites
 - let the watcher keep those targets in sync
 
+Each target is independently active or inactive. Only active targets with a
+present WordPress site are eligible for `start-active`; missing or inactive
+targets have their persistent LaunchAgent definition retired. Watch cycles use
+an atomic per-target lock, so a manual sync and a watcher cannot overlap.
+
+Detailed watcher behavior, status states, log rotation, exclusion guidance,
+and upgrade instructions are in [`docs/watcher.md`](docs/watcher.md).
+
 ## Current Limitations
 
 - Early macOS-first prototype.
 - The watcher service currently depends on `rsync`, `jq`, and `launchd`.
+- The macOS prototype uses efficient polling with debounce/backoff rather than
+  a new filesystem-watcher dependency.
 - It is focused on local development, not deployment.
 - It syncs code only, not content or databases.
 

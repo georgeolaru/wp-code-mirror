@@ -153,6 +153,12 @@ Each target gets:
 - a stdout log
 - a stderr log
 
+Installed watchers analyze each component once, debounce write bursts for one
+second, and back idle polling off from 15 seconds to five minutes. Per-target
+locks prevent overlapping admin, CLI, and watcher cycles. LaunchAgents do not
+use automatic `KeepAlive`; a missing target exits cleanly instead of restarting
+in a loop. See [`watcher.md`](watcher.md) for the complete model.
+
 ## Manual Sanity Check
 
 After saving the config, you can verify sync status manually:
@@ -172,6 +178,15 @@ Install and start the watcher service manually:
 ```bash
 bash scripts/wp-code-sync-service.sh install --config /absolute/path/to/wp-code-mirror.config.json --target smoke-site
 ```
+
+Start or upgrade only targets marked `active` whose site directories exist:
+
+```bash
+bash scripts/wp-code-sync-service.sh start-active --config /absolute/path/to/wp-code-mirror.config.json
+```
+
+To rewrite legacy definitions without starting any watcher, use
+`upgrade-active` instead.
 
 Check service status:
 
@@ -194,3 +209,8 @@ If the service appears installed but not running, inspect:
 - the LaunchAgent plist in `~/Library/LaunchAgents`
 - the stdout log in `wp-content/uploads/wp-code-mirror/tmp`
 - the stderr log in `wp-content/uploads/wp-code-mirror/tmp`
+
+For LaunchAgents installed by an older version (2-second polling and
+`KeepAlive=true`), keep them unloaded and follow the upgrade sequence in
+[`watcher.md`](watcher.md#upgrading-existing-launchagents) before starting any
+target.

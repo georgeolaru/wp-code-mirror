@@ -27,7 +27,6 @@ detect_default_storage_root() {
 
 DEFAULT_STORAGE_ROOT="$(detect_default_storage_root)"
 DEFAULT_CONFIG_PATH="${DEFAULT_STORAGE_ROOT}/config/wp-code-mirror.config.json"
-LAUNCH_AGENTS_DIR="${HOME}/Library/LaunchAgents"
 
 usage() {
   cat <<'EOF'
@@ -41,7 +40,7 @@ Usage:
       --mu-plugins <a,b>     Comma-separated mu-plugin entries to mirror
       --create-site          Create the WordPress Studio site first (studio CLI)
       --no-open              Skip auto-opening WP Admin after creating the site
-      --interval <seconds>   Watcher interval (default: 2)
+      --interval <seconds>   Watcher base interval (default: 15; idle backoff reaches 300)
       --config <path>        Config file (default: uploads/wp-code-mirror/config/...)
 
   bash scripts/wp-code-target.sh remove <label> [options]
@@ -74,10 +73,6 @@ require_tool() {
   command -v "${name}" >/dev/null 2>&1 || fail "missing required tool: ${name}"
 }
 
-plist_path_for() {
-  printf '%s/com.wp-code-mirror.sync.%s.plist\n' "${LAUNCH_AGENTS_DIR}" "$1"
-}
-
 launchd_label_for() {
   printf 'com.wp-code-mirror.sync.%s\n' "$1"
 }
@@ -100,81 +95,24 @@ write_config() {
 }
 
 watcher_loaded() {
-  # launchctl print is an exact lookup; grepping `launchctl list` is unreliable under pipefail
-  # (grep -q SIGPIPEs launchctl).
-  launchctl print "gui/$(id -u)/$(launchd_label_for "$1")" >/dev/null 2>&1
-}
-
-watch_stub_path_for() {
-  printf '%s/bin/wp-code-mirror-watch-%s\n' "${DEFAULT_STORAGE_ROOT}" "$1"
+  bash "${SCRIPT_DIR}/wp-code-sync-service.sh" status --target "$1" --json 2>/dev/null \
+    | jq -e '.running == true' >/dev/null 2>&1
 }
 
 install_watcher() {
   local label="$1" config_path="$2" interval="$3"
-  local plist tmp_dir stub
-  plist="$(plist_path_for "${label}")"
-  tmp_dir="${DEFAULT_STORAGE_ROOT}/tmp"
-  stub="$(watch_stub_path_for "${label}")"
-  mkdir -p "${tmp_dir}" "${DEFAULT_STORAGE_ROOT}/bin" "${LAUNCH_AGENTS_DIR}"
-
-  # A per-target runner executable, and the plist launches IT (not /bin/bash directly):
-  # macOS Login Items names background items after the program, so each watcher shows up as
-  # "wp-code-mirror-watch-<label>" instead of an anonymous "bash".
-  cat >"${stub}" <<STUB
-#!/bin/bash
-exec /bin/bash "${SCRIPT_DIR}/wp-code-sync.sh" watch \\
-  --config "${config_path}" \\
-  --target "${label}" \\
-  --interval "${interval}" \\
-  --status-file "${tmp_dir}/wp-code-mirror-${label}-status.json"
-STUB
-  chmod +x "${stub}"
-
-  cat >"${plist}" <<PLIST
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-<dict>
-  <key>Label</key>
-  <string>$(launchd_label_for "${label}")</string>
-  <key>ProgramArguments</key>
-  <array>
-    <string>${stub}</string>
-  </array>
-  <key>RunAtLoad</key>
-  <true/>
-  <key>KeepAlive</key>
-  <true/>
-  <key>StandardOutPath</key>
-  <string>${tmp_dir}/wp-code-mirror-${label}.log</string>
-  <key>StandardErrorPath</key>
-  <string>${tmp_dir}/wp-code-mirror-${label}.error.log</string>
-  <key>WorkingDirectory</key>
-  <string>${ROOT_DIR}</string>
-</dict>
-</plist>
-PLIST
-
-  if watcher_loaded "${label}"; then
-    launchctl bootout "gui/$(id -u)" "${plist}" 2>/dev/null || true
-  fi
-  launchctl bootstrap "gui/$(id -u)" "${plist}"
+  bash "${SCRIPT_DIR}/wp-code-sync-service.sh" install \
+    --config "${config_path}" \
+    --runtime-dir "${DEFAULT_STORAGE_ROOT}/tmp" \
+    --target "${label}" \
+    --interval "${interval}" >/dev/null
 }
 
 remove_watcher() {
-  local label="$1" plist
-  plist="$(plist_path_for "${label}")"
-
-  if watcher_loaded "${label}"; then
-    launchctl bootout "gui/$(id -u)" "${plist}" 2>/dev/null \
-      || launchctl bootout "gui/$(id -u)/$(launchd_label_for "${label}")" 2>/dev/null \
-      || true
-  fi
-  rm -f "${plist}" "$(watch_stub_path_for "${label}")"
-  # Sweep the watcher's tmp artifacts so retired targets leave nothing behind.
-  rm -f "${DEFAULT_STORAGE_ROOT}/tmp/wp-code-mirror-${label}-status.json" \
-        "${DEFAULT_STORAGE_ROOT}/tmp/wp-code-mirror-${label}.log" \
-        "${DEFAULT_STORAGE_ROOT}/tmp/wp-code-mirror-${label}.error.log"
+  local label="$1"
+  bash "${SCRIPT_DIR}/wp-code-sync-service.sh" uninstall \
+    --runtime-dir "${DEFAULT_STORAGE_ROOT}/tmp" \
+    --target "${label}" >/dev/null
 }
 
 csv_to_json_array() {
@@ -218,7 +156,7 @@ open_wp_admin() {
 
 cmd_add() {
   local label="$1"; shift
-  local config_path="${DEFAULT_CONFIG_PATH}" site_path="" site_name="" themes_csv="" plugins_csv="" mu_csv="" create_site=0 interval=2 open_admin=1
+  local config_path="${DEFAULT_CONFIG_PATH}" site_path="" site_name="" themes_csv="" plugins_csv="" mu_csv="" create_site=0 interval=15 open_admin=1
 
   while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -275,6 +213,7 @@ cmd_add() {
     '.targets = [{
       label: $label,
       site_path: $site_path,
+      active: true,
       themes: $themes,
       plugins: $plugins,
       mu_plugins: $mu_plugins
@@ -374,20 +313,23 @@ cmd_list() {
 
   [[ -f "${config_path}" ]] || fail "config file not found: ${config_path}"
 
-  local label state
-  while IFS= read -r label; do
-    if watcher_loaded "${label}"; then
+  local target label active state
+  while IFS= read -r target; do
+    label="$(jq -r '.label' <<<"${target}")"
+    active="$(jq -r 'if has("active") then .active else true end' <<<"${target}")"
+    if [[ "${active}" != "true" ]]; then
+      state="inactive"
+    elif watcher_loaded "${label}"; then
       state="watching"
     else
       state="no watcher"
     fi
     printf '%-32s %-12s %s\n' "${label}" "${state}" "$(target_site_path "${config_path}" "${label}")"
-  done < <(jq -r '.targets[].label' "${config_path}")
+  done < <(jq -c '.targets[]' "${config_path}")
 }
 
 main() {
   require_tool jq
-  require_tool launchctl
 
   local command="${1:-}"
   [[ -n "${command}" ]] || { usage; exit 1; }
@@ -413,7 +355,7 @@ main() {
       [[ $# -ge 1 ]] || fail "rewatch requires a <label>"
       local label="$1"; shift
       target_exists "${DEFAULT_CONFIG_PATH}" "${label}" || fail "no such target: ${label}"
-      install_watcher "${label}" "${DEFAULT_CONFIG_PATH}" 2
+      install_watcher "${label}" "${DEFAULT_CONFIG_PATH}" 15
       echo "Watcher regenerated: $(launchd_label_for "${label}")"
       ;;
     list)

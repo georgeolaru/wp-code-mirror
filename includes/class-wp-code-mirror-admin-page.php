@@ -108,6 +108,7 @@ class WP_Code_Mirror_Admin_Page {
 									[
 										'label'      => '',
 										'site_path'  => '',
+										'active'     => true,
 										'themes'     => [],
 										'plugins'    => [],
 										'mu_plugins' => [],
@@ -122,7 +123,7 @@ class WP_Code_Mirror_Admin_Page {
 						</div>
 
 						<script type="text/template" id="wp-code-mirror-target-template">
-							<?php $this->render_target_editor( '__INDEX__', [ 'label' => '', 'site_path' => '', 'themes' => [], 'plugins' => [], 'mu_plugins' => [] ] ); ?>
+							<?php $this->render_target_editor( '__INDEX__', [ 'label' => '', 'site_path' => '', 'active' => true, 'themes' => [], 'plugins' => [], 'mu_plugins' => [] ] ); ?>
 						</script>
 
 						<p>
@@ -192,19 +193,10 @@ class WP_Code_Mirror_Admin_Page {
 		];
 
 		try {
+			$previous_config = $this->repository->load();
 			$config = $this->repository->normalize_from_input( $input );
 			$this->repository->save( $config );
-
-			foreach ( (array) $config['targets'] as $target ) {
-				if ( empty( $target['label'] ) ) {
-					continue;
-				}
-
-				$status = $this->bridge->get_service_status( (string) $target['label'] );
-				if ( ! empty( $status['installed'] ) ) {
-					$this->bridge->run_service_command( 'restart', (string) $target['label'] );
-				}
-			}
+			$this->reconcile_services( $previous_config, $config );
 
 			$this->redirect_with_notice( 'Config saved.', 'success' );
 		} catch ( Throwable $exception ) {
@@ -258,6 +250,15 @@ class WP_Code_Mirror_Admin_Page {
 				<input type="text" name="targets[<?php echo esc_attr( (string) $index ); ?>][site_path]" value="<?php echo esc_attr( (string) ( $target['site_path'] ?? '' ) ); ?>" class="large-text code">
 			</label>
 
+			<div class="wp-code-mirror-field">
+				<span>Watcher</span>
+				<input type="hidden" name="targets[<?php echo esc_attr( (string) $index ); ?>][active]" value="0">
+				<label>
+					<input type="checkbox" name="targets[<?php echo esc_attr( (string) $index ); ?>][active]" value="1" <?php checked( (bool) ( $target['active'] ?? true ) ); ?>>
+					Active (eligible for Start Active Watchers)
+				</label>
+			</div>
+
 			<label class="wp-code-mirror-field">
 				<span>Themes</span>
 				<textarea name="targets[<?php echo esc_attr( (string) $index ); ?>][themes]" rows="4" class="large-text code"><?php echo esc_textarea( implode( "\n", (array) ( $target['themes'] ?? [] ) ) ); ?></textarea>
@@ -274,6 +275,93 @@ class WP_Code_Mirror_Admin_Page {
 			</label>
 		</div>
 		<?php
+	}
+
+	/**
+	 * Restart only installed services whose effective mirror config changed.
+	 * Inactive and removed targets are uninstalled so legacy RunAtLoad definitions cannot return at login.
+	 *
+	 * @param array<string,mixed> $previous_config
+	 * @param array<string,mixed> $config
+	 */
+	private function reconcile_services( array $previous_config, array $config ): void {
+		$previous_targets = $this->index_targets_by_label( (array) ( $previous_config['targets'] ?? [] ) );
+		$current_targets  = $this->index_targets_by_label( (array) ( $config['targets'] ?? [] ) );
+		$global_changed   = (string) ( $previous_config['source_site'] ?? '' ) !== (string) ( $config['source_site'] ?? '' )
+			|| array_values( (array) ( $previous_config['rsync_excludes'] ?? [] ) ) !== array_values( (array) ( $config['rsync_excludes'] ?? [] ) );
+
+		foreach ( $current_targets as $label => $target ) {
+			$status = $this->bridge->get_service_status( $label );
+			if ( empty( $status['installed'] ) ) {
+				continue;
+			}
+
+			$is_active  = ! isset( $target['active'] ) || (bool) $target['active'];
+			if ( ! $is_active ) {
+				$this->run_service_command_or_throw( 'uninstall', $label );
+				continue;
+			}
+
+			$site_path = rtrim( (string) ( $target['site_path'] ?? '' ), '/' );
+			if ( ! is_dir( $site_path . '/wp-content/themes' ) || ! is_dir( $site_path . '/wp-content/plugins' ) ) {
+				$this->run_service_command_or_throw( 'uninstall', $label );
+				continue;
+			}
+
+			$target_changed = ! isset( $previous_targets[ $label ] )
+				|| $this->target_service_signature( $previous_targets[ $label ] ) !== $this->target_service_signature( $target );
+			if ( $global_changed || $target_changed ) {
+				$this->run_service_command_or_throw( 'restart', $label );
+			}
+		}
+
+		foreach ( $previous_targets as $label => $target ) {
+			if ( isset( $current_targets[ $label ] ) ) {
+				continue;
+			}
+
+			$status = $this->bridge->get_service_status( $label );
+			if ( ! empty( $status['installed'] ) ) {
+				$this->run_service_command_or_throw( 'uninstall', $label );
+			}
+		}
+	}
+
+	/**
+	 * @param array<int,mixed> $targets
+	 * @return array<string,array<string,mixed>>
+	 */
+	private function index_targets_by_label( array $targets ): array {
+		$indexed = [];
+		foreach ( $targets as $target ) {
+			if ( ! is_array( $target ) || empty( $target['label'] ) ) {
+				continue;
+			}
+			$indexed[ (string) $target['label'] ] = $target;
+		}
+		return $indexed;
+	}
+
+	/**
+	 * @param array<string,mixed> $target
+	 */
+	private function target_service_signature( array $target ): string {
+		$signature = [
+			'site_path'  => (string) ( $target['site_path'] ?? '' ),
+			'active'     => ! isset( $target['active'] ) || (bool) $target['active'],
+			'themes'     => array_values( (array) ( $target['themes'] ?? [] ) ),
+			'plugins'    => array_values( (array) ( $target['plugins'] ?? [] ) ),
+			'mu_plugins' => array_values( (array) ( $target['mu_plugins'] ?? [] ) ),
+		];
+
+		return (string) json_encode( $signature, JSON_UNESCAPED_SLASHES );
+	}
+
+	private function run_service_command_or_throw( string $command, string $label ): void {
+		$result = $this->bridge->run_service_command( $command, $label );
+		if ( empty( $result['ok'] ) ) {
+			throw new RuntimeException( (string) ( $result['output'] ?? 'Service reconciliation failed.' ) );
+		}
 	}
 
 	/**
